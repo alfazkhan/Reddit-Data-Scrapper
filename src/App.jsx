@@ -1,0 +1,99 @@
+import { useState, useEffect, useRef, useContext } from "react";
+import "./App.css";
+import ServerStatus from "./components/ui/ServerStatus";
+import Header from "./components/ui/Header";
+import { Flex } from "@chakra-ui/react";
+import UserInput from "./components/ui/UserInput.jsx";
+import SubredditsSuggestions from "./components/ui/SubredditsSuggestion";
+import ProgressBar from "./components/ui/ProgressBar";
+import DataTabs from "./components/ui/DataTabs";
+import { SubredditContext } from "./store/SubredditContext";
+import UpcomingFeatures from "./components/ui/UpcomingFeatures";
+
+function App() {
+  const [progress, setProgress] = useState(0);
+  const [posts, setPosts] = useState([]); // New state for raw post data
+  const [status, setStatus] = useState("offline");
+
+
+  const { subredditName, targetPostCount } = useContext(SubredditContext);
+
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    const socket = new WebSocket("ws://192.168.0.246:8765");
+    socketRef.current = socket;
+    socket.onopen = () => setStatus("online");
+    socket.onclose = () => setStatus("offline");
+
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+
+      if (message.type === "progress") {
+        console.log(message);
+        setProgress(message.value);
+      }
+
+      if (message.type === "status") {
+        console.log(message)
+      }
+
+      if (message.type === "delta_update") {
+        console.log(message);
+        setProgress(message.progress);
+      }
+
+      if (message.type === "final_data") {
+        console.log(message);
+        setProgress(100);
+        setPosts(message.posts);
+      }
+    };
+    return () => socket.close();
+  }, []);
+
+  function StartScraping() {
+    const socket = socketRef.current;
+    if (socket?.readyState === WebSocket.OPEN) {
+      setPosts([]);
+      setProgress(0);
+      socket.send(
+        JSON.stringify({
+          type: "start_scrape",
+          subreddit: subredditName,
+          count: targetPostCount,
+        }),
+      );
+    }
+  }
+
+  return (
+    <Flex direction="column" justifyContent="center" width="80%" margin="auto">
+      <Flex gap="4" align="anchor-center" justify="space-between" margin="5">
+        <Header />
+        <ServerStatus status={status} />
+      </Flex>
+
+      <Flex justifyContent="center" gap="2" margin="5" flexDirection="column">
+        <UserInput
+          onStart={StartScraping}
+        />
+        <SubredditsSuggestions />
+      </Flex>
+
+      <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
+        <ProgressBar value={progress} />
+      </Flex>
+
+      <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
+        <DataTabs data={posts} />
+      </Flex>
+
+      <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
+        <UpcomingFeatures />
+      </Flex>
+    </Flex>
+  );
+}
+
+export default App;

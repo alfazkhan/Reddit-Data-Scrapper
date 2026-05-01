@@ -1,0 +1,22 @@
+import { HStack, Progress } from "@chakra-ui/react";
+
+export default function ProgressBar({ value }) {
+  return (
+    <Progress.Root
+      colorPalette="orange"
+      animated={value !== 100}
+      striped={value !== 100}
+      variant="subtle"
+      value={value}
+      size="lg"
+    >
+      <Progress.Label marginBottom="2">Processing Posts</Progress.Label>
+      <HStack gap="5">
+        <Progress.Track flex="1">
+          <Progress.Range />
+        </Progress.Track>
+        <Progress.ValueText>{value}%</Progress.ValueText>
+      </HStack>
+    </Progress.Root>
+  );
+}
