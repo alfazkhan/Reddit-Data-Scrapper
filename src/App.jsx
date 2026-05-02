@@ -14,9 +14,9 @@ function App() {
   const [progress, setProgress] = useState(0);
   const [posts, setPosts] = useState([]); // New state for raw post data
   const [status, setStatus] = useState("offline");
+  const [processingStatus, setProcessingStatus] = useState(false);
 
-
-  const { subredditName, targetPostCount } = useContext(SubredditContext);
+  const { subredditName, targetPostCount, useOnlyCache } = useContext(SubredditContext);
 
   const socketRef = useRef(null);
 
@@ -35,16 +35,24 @@ function App() {
       }
 
       if (message.type === "status") {
-        console.log(message)
+        setProcessingStatus(message.message);
+        console.log(message);
       }
 
       if (message.type === "delta_update") {
         console.log(message);
+        setProcessingStatus("Receiving deltas...");
+        setPosts((posts) => {
+          const newPosts = [...posts];
+          newPosts.push(message.post);
+          return newPosts;
+        });
         setProgress(message.progress);
       }
 
       if (message.type === "final_data") {
-        console.log(message);
+        console.log(message)
+        setProcessingStatus("Process Completed");
         setProgress(100);
         setPosts(message.posts);
       }
@@ -53,6 +61,7 @@ function App() {
   }, []);
 
   function StartScraping() {
+    setProcessingStatus("Sending Request...");
     const socket = socketRef.current;
     if (socket?.readyState === WebSocket.OPEN) {
       setPosts([]);
@@ -62,6 +71,7 @@ function App() {
           type: "start_scrape",
           subreddit: subredditName,
           count: targetPostCount,
+          useOnlyCache: useOnlyCache,
         }),
       );
     }
@@ -75,19 +85,21 @@ function App() {
       </Flex>
 
       <Flex justifyContent="center" gap="2" margin="5" flexDirection="column">
-        <UserInput
-          onStart={StartScraping}
-        />
+        <UserInput onStart={StartScraping} />
         <SubredditsSuggestions />
       </Flex>
 
-      <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
-        <ProgressBar value={progress} />
-      </Flex>
+      {processingStatus && (
+        <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
+          <ProgressBar value={progress} processingStatus={processingStatus} />
+        </Flex>
+      )}
 
-      <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
-        <DataTabs data={posts} />
-      </Flex>
+      {posts.length !== 0 && (
+        <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
+          <DataTabs postsData={posts} />
+        </Flex>
+      )}
 
       <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
         <UpcomingFeatures />

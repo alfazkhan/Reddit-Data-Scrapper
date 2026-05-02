@@ -1,6 +1,6 @@
 import { HStack, Progress } from "@chakra-ui/react";
 
-export default function ProgressBar({ value }) {
+export default function ProgressBar({ value, processingStatus }) {
   return (
     <Progress.Root
       colorPalette="orange"
@@ -10,7 +10,7 @@ export default function ProgressBar({ value }) {
       value={value}
       size="lg"
     >
-      <Progress.Label marginBottom="2">Processing Posts</Progress.Label>
+      <Progress.Label marginBottom="2">{processingStatus}</Progress.Label>
       <HStack gap="5">
         <Progress.Track flex="1">
           <Progress.Range />

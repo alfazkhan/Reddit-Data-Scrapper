@@ -4,20 +4,24 @@ import { useReducer } from "react";
 const initialState = {
   subredditName: "AskIndianWomen",
   targetPostCount: 100,
+  useOnlyCache: true
 };
 
 function SubredditReducer(prevState, action) {
   switch(action.type){
     case "NAME_CHANGE": return {...prevState, subredditName: action.payload};
     case "COUNT_CHANGE": return {...prevState, targetPostCount: action.payload};
+    case "CACHING_CHANGE": return {...prevState, useOnlyCache: action.payload};
   }
 }
 
 export const SubredditContext = createContext({
   subredditName: "",
   targetPostCount: 0,
+  useOnlyCache: true,
   handleNameChange: () => {},
   handleCountChange: () => {},
+  toggleCachingChange: ()=>{}
 });
 
 export default function SubredditContextProvider({children}) {
@@ -37,10 +41,18 @@ export default function SubredditContextProvider({children}) {
     })
   }
 
+    function toggleCachingChange(value) {
+    dispatch({
+        type: "CACHING_CHANGE",
+        payload: value
+    })
+  }
+
   const ctxValue = {
     subredditName: state.subredditName,
     targetPostCount: state.targetPostCount,
-    handleNameChange, handleCountChange
+    useOnlyCache: state.useOnlyCache,
+    handleNameChange, handleCountChange, toggleCachingChange
   };
 
   return <SubredditContext.Provider value={ctxValue}>{children}</SubredditContext.Provider>

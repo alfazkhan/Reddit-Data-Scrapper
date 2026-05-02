@@ -4,9 +4,10 @@ import KeywordTable from "../Data/KeywordTable";
 import Sentiment from "../Data/Sentiment";
 import PieChart from "../Data/PieChart";
 
-export default function DataTabs() {
+export default function DataTabs({postsData}) {
+  
   const TabsListData = [
-    { value: "Sentiments", icon: LuFolder, content: <Sentiment/> },
+    { value: "Sentiments", icon: LuFolder, content: <Sentiment data={postsData}/> },
     { value: "Pie Chart", icon: LuSquareCheck, content: "Coming Soon" },
     { value: "Posts Table", icon: LuUser, content: "Coming Soon" },
     { value: "Keyword Table", icon: LuUser, content: "Coming Soon" },

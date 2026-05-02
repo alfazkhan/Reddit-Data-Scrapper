@@ -1,61 +1,77 @@
+import {  HStack, Text, Flex } from "@chakra-ui/react";
 
-const Sentiment = ({ data, onSelect }) => {
-  if (!data || Object.keys(data).length === 0) {
-    return (
-      <div className="sentiment-card thinking">
-        <div className="sentiment-emoji">🤔</div>
-        <p className="sentiment-status">Analyzing subreddit mood...</p>
-      </div>
-    );
+export default function Sentiment({ data,  }) {
+  const sentimentCounts = {
+    Positive: 0,
+    Neutral: 0,
+    Negative: 0,
+  };
+
+  if (data && Array.isArray(data)) {
+    data.forEach((post) => {
+      if (sentimentCounts[post.sentiment] !== undefined) {
+        sentimentCounts[post.sentiment]++;
+      }
+    });
   }
 
-  const total = Object.values(data).reduce((acc, val) => acc + val, 0);
+  const total = data?.length || 0;
+
   const config = {
     Positive: { emoji: "😊", color: "#4ade80", label: "Positive" },
     Neutral: { emoji: "😐", color: "#94a3b8", label: "Neutral" },
     Negative: { emoji: "😠", color: "#f87171", label: "Negative" },
   };
 
-  console.log(data)
+  if (total === 0) {
+    return (
+      <Flex justifyContent="center" padding={10}>
+        <Text color="whiteAlpha.600">Waiting for Data...</Text>
+      </Flex>
+    );
+  }
 
   return (
-    <div className="sentiment-container">
-      <h2 className="section-title">Public Sentiment (Click to Filter)</h2>
-      <div className="sentiment-grid">
-        {Object.entries(data).map(([type, count]) => {
-          const percentage = ((count / total) * 100).toFixed(1);
-          const { emoji, color, label } = config[type] || config.Neutral;
+    <Flex gap="4" width="full" direction="column">
+      <HStack width="full" justifyContent="space-around" gap="4">
+        {Object.keys(sentimentCounts).map((emotion) => {
+          // Calculate actual percentage
+          const percentage = total > 0 
+            ? ((sentimentCounts[emotion] / total) * 100).toFixed(0) 
+            : 0;
 
           return (
-            <div 
-              key={type} 
-              className="sentiment-card clickable" 
-              style={{ borderColor: color, cursor: 'pointer' }}
-              onClick={() => onSelect(type)}
+            <Flex
+              key={emotion}
+              flex="1"
+              flexDirection="column"
+              alignItems="center"
+              borderRadius="xl"
+              borderWidth="2px"
+              borderBottomWidth="7px"
+              borderColor={config[emotion].color}
+              padding={5}
+              cursor="pointer"
+              _hover={{ bg: "whiteAlpha.100" }}
             >
-              <div className="sentiment-main">
-                <span className="sentiment-emoji">{emoji}</span>
-                <span className="sentiment-label">{label}</span>
-              </div>
-              <div className="sentiment-stats">
-                <span className="sentiment-percentage">{percentage}%</span>
-                <span className="sentiment-count">({count} posts)</span>
-              </div>
-              <div className="sentiment-bar-bg">
-                <div 
-                  className="sentiment-bar-fill" 
-                  style={{ width: `${percentage}%`, backgroundColor: color }}
-                ></div>
-              </div>
-            </div>
+              <Text fontSize="6xl">{config[emotion].emoji}</Text>
+              <Text fontSize="2xl" fontWeight="extrabold" color="white">
+                {config[emotion].label}
+              </Text>
+              <Text
+                fontSize="3xl"
+                fontWeight="black"
+                color={config[emotion].color}
+              >
+                {percentage}%
+              </Text>
+              <Text fontSize="sm" color="whiteAlpha.500">
+                {sentimentCounts[emotion]} posts
+              </Text>
+            </Flex>
           );
         })}
-        <button className="step-btn" style={{ marginTop: '10px', width: '100%' }} onClick={() => onSelect(null)}>
-          Show All Posts
-        </button>
-      </div>
-    </div>
+      </HStack>
+    </Flex>
   );
-};
-
-export default Sentiment;
+}

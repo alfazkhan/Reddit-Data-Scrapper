@@ -2,6 +2,7 @@ import { List } from "@chakra-ui/react";
 import { LuCircleDashed } from "react-icons/lu";
 
 const UPCOMING_FEATURES = [
+  "Add use cache only button",
   "Advanced Emotions detector",
   "Pie Chart of different keywords",
   "Posts Table filtered by words",
