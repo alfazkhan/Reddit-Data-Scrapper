@@ -2,20 +2,20 @@ import { Tabs } from "@chakra-ui/react";
 import { LuFolder, LuSquareCheck, LuUser } from "react-icons/lu";
 import KeywordTable from "../Data/KeywordTable";
 import Sentiment from "../Data/Sentiment";
-import PieChart from "../Data/PieChart";
+import KeywordsPieChart from "../Data/KeywordsPieChart";
 
 export default function DataTabs({postsData}) {
   
   const TabsListData = [
     { value: "Sentiments", icon: LuFolder, content: <Sentiment data={postsData}/> },
-    { value: "Pie Chart", icon: LuSquareCheck, content: "Coming Soon" },
+    { value: "Pie Chart", icon: LuSquareCheck, content: <KeywordsPieChart data={postsData}/> },
     { value: "Posts Table", icon: LuUser, content: "Coming Soon" },
     { value: "Keyword Table", icon: LuUser, content: "Coming Soon" },
   ];
 
   return (
     <Tabs.Root
-      defaultValue="Sentiments"
+      defaultValue="Pie Chart"
       variant="plain"
     //   lazyMount
     //   unmountOnExit
