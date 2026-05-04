@@ -1,113 +1,103 @@
-import React, { useMemo, useState } from "react";
-import {
-  useReactTable,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  flexRender,
-  createColumnHelper,
-} from "@tanstack/react-table";
+import { HStack, Table, Field, NumberInput, Flex } from "@chakra-ui/react";
+import { useMemo, useState } from "react";
 
-const columnHelper = createColumnHelper();
+export default function KeywordTable({ data }) {
+  const [minValue, setMinValue] = useState(20);
+  const [maxValue, setMaxValue] = useState(100);
 
-const columns = [
-  columnHelper.accessor("word", {
-    header: "Keyword",
-    cell: (info) => <span className="table-word">{info.getValue()}</span>,
-  }),
-  columnHelper.accessor("count", {
-    header: "Frequency",
-    cell: (info) => <span className="table-count">{info.getValue()}</span>,
-  }),
-];
+  const keywordsCount = useMemo(() => {
+    const counts = {};
+    data.forEach((post) => {
+      const keywords = post.keywords;
+      if (!keywords) return;
 
-// Custom Filter Function for Comma Separated Values
-const commaSeparatedFilter = (row, columnId, filterValue) => {
-  if (!filterValue) return true;
+      Object.keys(keywords).forEach((keyword) => {
+        counts[keyword] === undefined
+          ? (counts[keyword] = 1)
+          : counts[keyword]++;
+      });
+    });
 
-  // Split input by commas, trim whitespace, and convert to lowercase
-  const searchTerms = filterValue
-    .split(",")
-    .map((term) => term.trim().toLowerCase())
-    .filter((term) => term !== "");
+    return counts;
+  }, [data]);
 
-  // Get the value of the cell being filtered
-  const cellValue = String(row.getValue(columnId)).toLowerCase();
-
-  // Return true if the cell matches ANY of the search terms
-  return searchTerms.some((term) => cellValue.includes(term));
-};
-
-const KeywordTable = ({ keywordData, minCount, maxCount }) => {
-  const [globalFilter, setGlobalFilter] = useState("");
-
-  const filteredData = useMemo(() => {
-    return keywordData.filter(
-      (item) => item.count >= minCount && item.count <= maxCount
+  let chartData = useMemo(() => {
+    const entries = Object.entries(keywordsCount).reduce(
+      (acc, [keyword, count]) => {
+        if (count >= minValue && count <= maxValue) {
+          acc.push({
+            id: keyword,
+            name: keyword,
+            value: count,
+          });
+        }
+        return acc;
+      },
+      [],
     );
-  }, [keywordData, minCount, maxCount]);
-
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: {
-      globalFilter,
-    },
-    onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: commaSeparatedFilter, // Apply the custom filter here
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
+    const sorted = entries.sort((a, b) => b.value - a.value);
+    console.log(sorted);
+    return entries;
+  }, [keywordsCount, minValue, maxValue]);
 
   return (
-    <div className="table-wrapper">
-      <div className="table-header-actions">
-        <input
-          value={globalFilter ?? ""}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          className="table-search-input"
-          placeholder="Search multiple (e.g. mumbai, train, road)"
-        />
-      </div>
-
-      <table className="data-table">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  onClick={header.column.getToggleSortingHandler()}
-                  style={{ cursor: "pointer" }}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                  {{
-                    asc: " ASC",
-                    desc: " DESC",
-                  }[header.column.getIsSorted()] ?? null}
-                </th>
-              ))}
-            </tr>
+    <Flex direction="column">
+      <HStack mb={5} justifyContent="space-around">
+        <Field.Root required alignItems="center">
+          <Field.Label>
+            Min Frequency <Field.RequiredIndicator />
+          </Field.Label>
+          <NumberInput.Root
+            defaultValue={minValue}
+            width="50%"
+            allowMouseWheel
+            onValueChange={(details) => setMinValue(details.valueAsNumber)}
+          >
+            <NumberInput.Control />
+            <NumberInput.Input />
+          </NumberInput.Root>
+          {/* <Field.HelperText>
+            Enter Number of Posts to be scrapped
+          </Field.HelperText> */}
+        </Field.Root>
+        <Field.Root required alignItems="center">
+          <Field.Label>
+            Max Frequency <Field.RequiredIndicator />
+          </Field.Label>
+          <NumberInput.Root
+            defaultValue={maxValue}
+            width="50%"
+            allowMouseWheel
+            onValueChange={(details) => setMaxValue(details.valueAsNumber)}
+          >
+            <NumberInput.Control />
+            <NumberInput.Input />
+          </NumberInput.Root>
+          {/* <Field.HelperText>
+            Enter Number of Posts to be scrapped
+          </Field.HelperText> */}
+        </Field.Root>
+      </HStack>
+      <Table.Root colorScheme="orange" variant="outline">
+        <Table.Header>
+          <Table.Row>
+            <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
+              Keyword
+            </Table.ColumnHeader>
+            <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
+              Count
+            </Table.ColumnHeader>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {chartData.map((item) => (
+            <Table.Row key={item.id} color="orange.600">
+              <Table.Cell>{item.name}</Table.Cell>
+              <Table.Cell>{item.value}</Table.Cell>
+            </Table.Row>
           ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        </Table.Body>
+      </Table.Root>
+    </Flex>
   );
-};
-
-export default KeywordTable;
+}

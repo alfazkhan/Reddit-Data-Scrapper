@@ -4,21 +4,36 @@ import KeywordTable from "../Data/KeywordTable";
 import Sentiment from "../Data/Sentiment";
 import KeywordsPieChart from "../Data/KeywordsPieChart";
 
-export default function DataTabs({postsData}) {
-  
+export default function DataTabs({ postsData }) {
   const TabsListData = [
-    { value: "Sentiments", icon: LuFolder, content: <Sentiment data={postsData}/> },
-    { value: "Pie Chart", icon: LuSquareCheck, content: <KeywordsPieChart data={postsData}/> },
-    { value: "Posts Table", icon: LuUser, content: "Coming Soon" },
-    { value: "Keyword Table", icon: LuUser, content: "Coming Soon" },
+    {
+      value: "Sentiments",
+      icon: LuFolder,
+      content: <Sentiment data={postsData} />,
+    },
+    {
+      value: "Pie Chart",
+      icon: LuSquareCheck,
+      content: <KeywordsPieChart data={postsData} />,
+    },
+    {
+      value: "Posts Table",
+      icon: LuUser,
+      content: "Pending",
+    },
+    {
+      value: "Keyword Table",
+      icon: LuUser,
+      content: <KeywordTable data={postsData} />,
+    },
   ];
 
   return (
     <Tabs.Root
-      defaultValue="Pie Chart"
+      defaultValue="Keyword Table"
       variant="plain"
-    //   lazyMount
-    //   unmountOnExit
+        lazyMount
+        unmountOnExit
       width="auto"
       fitted
       css={{

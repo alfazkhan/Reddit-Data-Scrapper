@@ -1,0 +1,10 @@
+﻿Task,Status,Type
+Posts Table filtered by words,Pending,Frontend
+Add use cache only button,Completed,Frontend
+Pie Chart of different keywords,Pending,Frontend
+Advanced Emotions detector,Pending,Backend
+Migrate high level state management from context to redux toolkit,Pending,Frontend
+Posts Table filtered by Emotions,Pending,Frontend
+Keyword Table,Pending,Frontend
+Chart showing Different emotions at different times of the day,Pending,Backend
+Segregation of posts based on topics,Pending,Backend

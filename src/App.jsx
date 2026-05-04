@@ -95,7 +95,7 @@ function App() {
         </Flex>
       )}
 
-      {posts.length !== 0 && (
+      {!posts.length !== 0 && ( //Remove ! in the end
         <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
           <DataTabs postsData={posts} />
         </Flex>

@@ -39,7 +39,6 @@ export default function KeywordsPieChart({ data }) {
     return data;
   }, [ keywordsCount, maxValue, minValue]);
 
-  console.log(chartData)
 
   const chart = useChart({
     data: chartData,
