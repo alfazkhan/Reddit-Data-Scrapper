@@ -36,8 +36,7 @@ export default function KeywordTable({ data }) {
       [],
     );
     const sorted = entries.sort((a, b) => b.value - a.value);
-    console.log(sorted);
-    return entries;
+    return sorted;
   }, [keywordsCount, minValue, maxValue]);
 
   return (
@@ -78,26 +77,36 @@ export default function KeywordTable({ data }) {
           </Field.HelperText> */}
         </Field.Root>
       </HStack>
-      <Table.Root colorScheme="orange" variant="outline">
-        <Table.Header>
-          <Table.Row>
-            <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
-              Keyword
-            </Table.ColumnHeader>
-            <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
-              Count
-            </Table.ColumnHeader>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {chartData.map((item) => (
-            <Table.Row key={item.id} color="orange.600">
-              <Table.Cell>{item.name}</Table.Cell>
-              <Table.Cell>{item.value}</Table.Cell>
+
+
+      <Table.ScrollArea h="500px" borderWidth="1px" rounded="md" css={{
+            "&::-webkit-scrollbar": {
+              display: "none",
+            },
+            msOverflowStyle: "none",
+            scrollbarWidth: "none",
+          }}>
+        <Table.Root colorScheme="orange" variant="outline" >
+          <Table.Header>
+            <Table.Row>
+              <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
+                Keyword
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
+                Count
+              </Table.ColumnHeader>
             </Table.Row>
-          ))}
-        </Table.Body>
-      </Table.Root>
+          </Table.Header>
+          <Table.Body>
+            {chartData.map((item) => (
+              <Table.Row key={item.id} color="orange.600">
+                <Table.Cell>{item.name}</Table.Cell>
+                <Table.Cell>{item.value}</Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      </Table.ScrollArea>
     </Flex>
   );
 }

@@ -1,85 +1,185 @@
-import React, { useMemo } from 'react';
-import { 
-  useReactTable, 
-  getCoreRowModel, 
-  getPaginationRowModel, 
-  getFilteredRowModel, 
-  flexRender,
-  createColumnHelper 
-} from '@tanstack/react-table';
+import {
+  HStack,
+  Table,
+  Field,
+  NumberInput,
+  Flex,
+  Pagination,
+  ButtonGroup,
+  IconButton,
+  Text,
+  Collapsible,
+  Stack,
+  Button,
+} from "@chakra-ui/react";
+import { useMemo, useState } from "react";
+import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
+import { LuChevronDown } from "react-icons/lu";
 
-const columnHelper = createColumnHelper();
-
-const columns = [
-  columnHelper.accessor('title', {
-    header: 'Title',
-    cell: info => <div className="post-title-cell" style={{ fontWeight: '600' }}>{info.getValue()}</div>,
-  }),
-  columnHelper.accessor('sentiment', {
-    header: 'Mood',
-    cell: info => (
-      <span className={`sentiment-tag ${info.getValue().toLowerCase()}`}>
-        {info.getValue()}
-      </span>
-    ),
-  }),
-  columnHelper.accessor('body', {
-    header: 'Preview',
-    cell: info => <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{info.getValue()}...</div>,
-  }),
+const config = [
+  { emoji: "", color: "#009637", label: "All" },
+  { emoji: "😊", color: "#009637", label: "Positive" },
+  { emoji: "😐", color: "#52719c", label: "Neutral" },
+  { emoji: "😠", color: "#aa0505", label: "Negative" },
 ];
 
-const PostsTable = ({ posts, selectedSentiment }) => {
-  const filteredData = useMemo(() => {
-    return selectedSentiment ? posts.filter(p => p.sentiment === selectedSentiment) : posts;
-  }, [posts, selectedSentiment]);
+function timeStampFormatter(time){
 
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
-  });
+  const formattedDate = time.split("T")[0] + " "
+  const formattedTime = time.split("T")[1].split(":")[0] + ":" + time.split("T")[1].split(":")[1] 
 
-  if (posts.length === 0) return <p className="empty-state">No posts loaded.</p>;
+  return <span><p>{formattedDate}</p> {formattedTime} </span>
+}
+
+export default function KeywordTable({ data: postsData }) {
+  const [sentiment, setSentiment] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  let data = postsData;
+
+  if (sentiment !== "All") {
+    data = postsData.filter((post) => post.sentiment === sentiment);
+  }
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return data.slice(start, end);
+  }, [data, currentPage]);
 
   return (
-    <div className="table-section">
-      <h3>{selectedSentiment ? `${selectedSentiment} Posts` : 'All Posts'}</h3>
-      <table className="data-table">
-        <thead>
-          {table.getHeaderGroups().map(hg => (
-            <tr key={hg.id}>
-              {hg.headers.map(header => (
-                <th key={header.id}>
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map(row => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map(cell => (
-                <td key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      
-      <div className="pagination" style={{ display: 'flex', gap: '10px', marginTop: '15px', alignItems: 'center' }}>
-        <button className="step-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Prev</button>
-        <span style={{ color: '#fff' }}>Page {table.getState().pagination.pageIndex + 1}</span>
-        <button className="step-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Next</button>
-      </div>
-    </div>
-  );
-};
+    <Flex direction="column">
+      <HStack width="full" justifyContent="space-around" gap="4" mb={4} borderWidth="0.1px" padding={3} borderColor="gray.700">
+        <Text fontSize="lg" fontWeight="bold">Filter Posts By</Text>
+        {config.map((emotion) => (
+          <Flex
+            key={emotion.label}
+            alignItems="center"
+            borderRadius="xs"
+            padding={2}
+            cursor="pointer"
+            backgroundColor={emotion.label === sentiment ?"orange.600": "gray.800"}
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={()=>setSentiment(emotion.label)}
+          >
+            <Text>{emotion.emoji}</Text>
+            <Text fontWeight="bold" color="white">
+              {emotion.label}
+            </Text>
+          </Flex>
+        ))}
+      </HStack>
+      <Table.ScrollArea h="500px" borderWidth="1px" rounded="md" borderColor="gray.700">
+        <Table.Root variant="outline">
+          <Table.Header>
+            <Table.Row>
+              <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
+                ID
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
+                Title
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
+                Post
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
+                Timestamp
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color="orange.600" fontWeight="extrabold">
+                Sentiment
+              </Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {paginatedData.map((post) => (
+              <Table.Row key={post.id} color="gray.100">
+                <Table.Cell
+                  maxW="100px"
+                  whiteSpace="normal"
+                  verticalAlign="top"
+                >
+                  {post.id}
+                </Table.Cell>
+                <Table.Cell
+                  maxW="200px"
+                  whiteSpace="normal"
+                  verticalAlign="top"
+                >
+                  {post.title}
+                </Table.Cell>
+                <Table.Cell
+                  maxW="300px"
+                  whiteSpace="normal"
+                  verticalAlign="top"
+                >
+                  <Collapsible.Root collapsedHeight="80px">
+                    <Collapsible.Content>
+                      <Stack>{post.body}</Stack>
+                    </Collapsible.Content>
+                    <Collapsible.Trigger asChild mt="3">
+                      <Button
+                        variant="solid"
+                        size="xs"
+                        fontSize="x-small"
+                        color="gray.400"
+                        padding={1}
+                        borderColor="gray.200"
+                      >
+                        <Collapsible.Context>
+                          {(api) => (api.open ? "Show Less" : "Show More")}
+                        </Collapsible.Context>
+                        <Collapsible.Indicator
+                          transition="transform 0.2s"
+                          _open={{ transform: "rotate(180deg)" }}
+                        >
+                          <LuChevronDown />
+                        </Collapsible.Indicator>
+                      </Button>
+                    </Collapsible.Trigger>
+                  </Collapsible.Root>
+                </Table.Cell>
+                <Table.Cell>{timeStampFormatter(post.timestamp)}</Table.Cell>
+                <Table.Cell
+                color={config.find((element) => post.sentiment === element.label).color}
+                >{post.sentiment}</Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      </Table.ScrollArea>
 
-export default PostsTable;
+      <Pagination.Root
+        count={data.length}
+        pageSize={pageSize}
+        page={currentPage}
+        onPageChange={(details) => setCurrentPage(details.page)}
+      >
+        <ButtonGroup variant="ghost" size="sm" wrap="wrap" mt={3}>
+          <Pagination.PrevTrigger asChild color="gray.100">
+            <IconButton>
+              <LuChevronLeft />
+            </IconButton>
+          </Pagination.PrevTrigger>
+
+          <Pagination.Items
+            render={(page) => (
+              <IconButton
+                variant={{ base: "ghost", _selected: "outline" }}
+                color="gray.100"
+              >
+                {page.value}
+              </IconButton>
+            )}
+          />
+
+          <Pagination.NextTrigger asChild color="gray.100">
+            <IconButton>
+              <LuChevronRight />
+            </IconButton>
+          </Pagination.NextTrigger>
+        </ButtonGroup>
+      </Pagination.Root>
+    </Flex>
+  );
+}

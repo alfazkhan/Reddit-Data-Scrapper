@@ -3,6 +3,7 @@ import { LuFolder, LuSquareCheck, LuUser } from "react-icons/lu";
 import KeywordTable from "../Data/KeywordTable";
 import Sentiment from "../Data/Sentiment";
 import KeywordsPieChart from "../Data/KeywordsPieChart";
+import PostsTable from "../Data/PostsTable";
 
 export default function DataTabs({ postsData }) {
   const TabsListData = [
@@ -19,7 +20,7 @@ export default function DataTabs({ postsData }) {
     {
       value: "Posts Table",
       icon: LuUser,
-      content: "Pending",
+      content: <PostsTable data={postsData}/>,
     },
     {
       value: "Keyword Table",
@@ -30,10 +31,10 @@ export default function DataTabs({ postsData }) {
 
   return (
     <Tabs.Root
-      defaultValue="Keyword Table"
+      defaultValue="Posts Table"
       variant="plain"
-        lazyMount
-        unmountOnExit
+      // lazyMount
+      // unmountOnExit
       width="auto"
       fitted
       css={{
