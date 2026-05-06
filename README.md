@@ -1,69 +1,101 @@
-# Reddit BI Dashboard & Streaming Scraper
+# Subreddit Scrapper: Real-Time Business Intelligence Dashboard
 
-A real-time, full-stack Business Intelligence pipeline that tracks public sentiment, city pulse, and keyword trends across Reddit communities. 
+A full-stack Business Intelligence (BI) tool designed to scrape, analyze, and visualize Reddit data in real-time. This project uses a Python-based backend for advanced Natural Language Processing (NLP) and a React-powered frontend for a seamless data visualization experience.
 
-Unlike traditional batch-scraping scripts, this project utilizes a **True Streaming Architecture**. It fetches, analyzes, and streams live Reddit data to a React dashboard in milliseconds, while silently archiving historical data in the background to ensure a continuous dataset.
+## Overview
 
-## 🚀 Key Features
+Subreddit Scrapper allows users to enter any subreddit name and fetch a specified number of posts. The system performs real-time sentiment analysis, keyword extraction, and Named Entity Recognition (NER) to provide actionable insights through an interactive dashboard.
 
-* **True Streaming Pipeline:** Scrapes and pushes data to the UI individually via WebSockets the moment a post is found, eliminating load-time bottlenecks.
-* **Transformer-Based Sentiment:** Uses the `RoBERTa` transformer model (via Hugging Face) for context-aware sentiment analysis (Positive, Neutral, Negative) rather than outdated keyword-matching algorithms.
-* **Intelligent Gap-Filling:** Automatically detects the time gap between your current session and your last saved cache. It prioritizes the newest posts for the UI, then silently scrolls back to fill the historical gap in the background.
-* **Interactive UI:** A decoupled React frontend featuring real-time progress tracking, clickable sentiment distribution cards, and paginated data grids (powered by TanStack Table).
-* **Automated NLP:** Performs on-the-fly tokenization, stop-word removal, and lemmatization (via NLTK) to generate accurate keyword frequency maps.
+### Key Features
+* **Live Scrapping:** Uses Playwright to navigate Reddit and stream new posts directly to the UI.
+* **Hybrid Caching:** Implements a gap-filling caching mechanism that stores historical data locally in JSON format to speed up repeated queries.
+* **Sentiment Analysis:** Utilizes the `cardiffnlp/twitter-roberta-base-sentiment-latest` Transformer model for high-accuracy context-aware sentiment classification.
+* **Named Entity Recognition (NER):** Leverages Spacy (`en_core_web_sm`) to identify entities such as Organizations, Money, Dates, and People.
+* **Real-Time Updates:** Communication between the frontend and backend is handled via WebSockets for live progress tracking and data deltas.
+* **Visual Analytics:** Interactive pie charts, sentiment cards, and keyword frequency tables.
 
-## 🛠️ Architecture
+## Dashboard Preview
 
-1. **Frontend (React):** Acts as a "dumb" view layer. Requests data, listens to the WebSocket, and dynamically recalculates UI states (Sentiment & Keywords) based on the incoming raw `posts` array.
-2. **WebSocket Server (Python):** The orchestrator. Manages the connection and routes Playwright tasks.
-3. **Headless Browser (Playwright):** Navigates Reddit dynamically to bypass standard API limitations.
-4. **Local Cache Engine:** Persists all scraped data instantly to local JSON files (`cache/{subreddit}.json`), preventing data loss during kernel crashes.
+To help visualize the data, the dashboard provides several analytical views:
 
-## 💻 Tech Stack
+### Sentiment Analysis
+The sentiment overview gives a high-level breakdown of the emotional tone of the scraped posts.
+![Sentiment Dashboard](./src/assets/Screenshots/Sentiments.png)
 
-* **Frontend:** React, Vite, TanStack Table, Custom CSS
-* **Backend:** Python 3.12+, `websockets`, `asyncio`
-* **Scraping:** Playwright (Async API)
-* **Machine Learning / NLP:** `transformers` (PyTorch), NLTK (Natural Language Toolkit)
+### Keyword Visualization
+Interactive charts show the most frequent terms, allowing for quick identification of trending topics.
+![Keyword Pie Chart](./src/assets/Screenshots/Pie-Chart.png)
 
-## ⚙️ Installation & Setup
+### Data Tables
+Detailed views for specific posts and entity extraction results.
+![Posts Table with NER](./src/assets/Screenshots/Post-Table.png)
+![Keyword Frequency Table](./src/assets/Screenshots/Keyword-Table.png)
 
-### 1. Backend (Python)
-Navigate to your backend directory and set up the virtual environment:
-```bash
-# Create and activate virtual environment
-python -m venv .venv
-# Windows:
-.\.venv\Scripts\activate
-# Mac/Linux:
-source .venv/bin/activate
+---
 
-# Install dependencies
-pip install websockets playwright transformers torch nltk
+## Tech Stack
 
-# Install Playwright browser binaries
-playwright install
+### Backend (Python)
+* **Playwright:** Headless/Headful browser automation for web scraping.
+* **WebSockets:** Real-time bi-directional communication.
+* **Transformers (Hugging Face):** RoBERTa model for sentiment analysis.
+* **Spacy:** Named Entity Recognition (NER).
+* **NLTK:** Tokenization, stopword removal, and lemmatization.
+* **Asyncio:** Concurrent processing of multiple browser tabs.
 
-Note: The script expects a local Brave browser installation path (or standard Chromium) for scraping.
+### Frontend (React)
+* **Tailwind CSS:** Modern, responsive UI design.
+* **Lucide React:** Icon set for the dashboard.
+* **chartjs:** Visualization for sentiment and keyword data.
+* **State Management:** Hooks for handling live WebSocket data streams.
 
-2. Frontend (React)
-Navigate to your frontend directory:
+---
 
-npm install
-npm run dev
+##  Backend Logic & Workflow
 
-🏃‍♂️ Usage
-Start the Python Backend: Run the WebSocket server script (e.g., your Jupyter Notebook Scrapping_7.ipynb or a compiled .py file). It will listen on ws://localhost:8765.
+1.  **Command Reception:** The backend waits for a WebSocket command containing the subreddit name and post count.
+2.  **Phase 1 (Priority Stream):** The scraper identifies new posts not present in the cache and prioritizes them for immediate analysis and UI update.
+3.  **Phase 2 (NLP Pipeline):**
+    * **Tokenization & Cleaning:** Removes stopwords and "Reddit-specific" noise like "deleted" or "amp".
+    * **Sentiment:** Classified via RoBERTa Transformer.
+    * **NER:** Filters for BI-relevant labels like `ORG`, `GPE`, `MONEY`, and `PRODUCT`.
+4.  **Phase 3 (Background Maintenance):** While the user views the data, the scraper continues to fill "gaps" between the latest post and the last cached post silently in the background.
+5.  **Phase 4 (Persistence):** Data is saved to local JSON files per subreddit to allow for "Cache Only" mode, bypassing the browser entirely for instant loading.
 
-Open the Dashboard: Navigate to your local React dev server (usually http://localhost:5173).
+---
 
-Query: Enter a Subreddit (e.g., mumbai, munich, BoycottIsrael) and a Post Count limit.
+## Installation & Setup
 
-Analyze: Click "Start Scraping." The dashboard will instantly populate with the latest data while the backend secures the historical gap in the background.
+### Prerequisites
+* Python 3.8+
+* Node.js & npm
+* Brave Browser (or Chromium)
 
-🗺️ Future Roadmap
-Topic Modeling (LDA): Grouping posts into automated themes (e.g., "Housing", "Traffic", "Politics").
+### Backend Setup
+1.  Navigate to the project directory.
+2.  Install dependencies:
+    ```bash
+    pip install nltk websockets playwright transformers torch spacy
+    python -m spacy download en_core_web_sm
+    ```
+3.  Update the `BRAVE_PATH` in the script to point to your browser executable.
+4.  Run the server:
+    ```bash
+    python Scrapping.py
+    ```
 
-CSV/Excel Export: Adding a one-click export button for downstream analysis in Tableau or Power BI.
+### Frontend Setup
+1.  Navigate to the frontend folder.
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Start the development server:
+    ```bash
+    npm start
+    ```
 
-Time-Series Analysis: Visualizing sentiment changes throughout the time of day.
+---
+
+## 📝 License
+This project was developed for educational and research purposes in Business Intelligence and Data Science.
