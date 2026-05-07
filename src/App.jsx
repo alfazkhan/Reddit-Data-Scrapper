@@ -15,6 +15,7 @@ function App() {
   const [posts, setPosts] = useState([]); // New state for raw post data
   const [status, setStatus] = useState("offline");
   const [processingStatus, setProcessingStatus] = useState(false);
+  const [cacheSummary, setCacheSummary] = useState([])
 
   const { subredditName, targetPostCount, useOnlyCache } = useContext(SubredditContext);
 
@@ -28,6 +29,12 @@ function App() {
 
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
+
+      if (message.type === "cache_summary") {
+        setStatus("online");
+        console.log(message);
+        setCacheSummary(message.message);
+      }
 
       if (message.type === "progress") {
         console.log(message);
@@ -94,7 +101,7 @@ function App() {
 
       <Flex justifyContent="center" gap="2" margin="5" flexDirection="column">
         <UserInput onStart={StartScraping} />
-        <SubredditsSuggestions />
+        <SubredditsSuggestions cacheSummary={cacheSummary} />
       </Flex>
 
       {processingStatus && (

@@ -22,17 +22,6 @@ const config = [
   { emoji: "😠", color: "#aa0505", label: "Negative" },
 ];
 
-function timeStampFormatter(time) {
-  const formattedDate = time.split("T")[0] + " ";
-  const formattedTime =
-    time.split("T")[1].split(":")[0] + ":" + time.split("T")[1].split(":")[1];
-
-  return (
-    <span>
-      <p>{formattedDate}</p> {formattedTime}{" "}
-    </span>
-  );
-}
 
 export default function KeywordTable({ data: postsData }) {
   const [sentiment, setSentiment] = useState("All");
