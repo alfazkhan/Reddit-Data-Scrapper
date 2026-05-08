@@ -13,25 +13,24 @@ import UpcomingFeatures from "./components/Feature Tracker/UpcomingFeatures";
 function App() {
   const [progress, setProgress] = useState(0);
   const [posts, setPosts] = useState([]); // New state for raw post data
-  const [status, setStatus] = useState("offline");
   const [processingStatus, setProcessingStatus] = useState(false);
   const [cacheSummary, setCacheSummary] = useState([])
 
-  const { subredditName, targetPostCount, useOnlyCache } = useContext(SubredditContext);
+  const { targetPostCount, useOnlyCache, serverStatusChange } = useContext(SubredditContext);
 
   const socketRef = useRef(null);
 
   useEffect(() => {
     const socket = new WebSocket("ws://192.168.0.246:8765");
     socketRef.current = socket;
-    socket.onopen = () => setStatus("online");
-    socket.onclose = () => setStatus("offline");
+    socket.onopen = () => serverStatusChange("online");
+    socket.onclose = () => serverStatusChange("offline");
 
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
 
       if (message.type === "cache_summary") {
-        setStatus("online");
+        serverStatusChange("online");
         console.log(message);
         setCacheSummary(message.message);
       }
@@ -75,7 +74,7 @@ function App() {
     return () => socket.close();
   }, [targetPostCount]);
 
-  function StartScraping() {
+  function StartScraping(subredditName, targetPostCount) {
     setProcessingStatus("Sending Request...");
     const socket = socketRef.current;
     if (socket?.readyState === WebSocket.OPEN) {
@@ -96,7 +95,7 @@ function App() {
     <Flex direction="column" justifyContent="center" width="80%" margin="auto">
       <Flex gap="4" align="anchor-center" justify="space-between" margin="5">
         <Header />
-        <ServerStatus status={status} />
+        <ServerStatus />
       </Flex>
 
       <Flex justifyContent="center" gap="2" margin="5" flexDirection="column">

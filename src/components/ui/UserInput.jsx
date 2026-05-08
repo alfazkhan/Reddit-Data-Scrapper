@@ -30,7 +30,7 @@ export default function UserInput({ onStart }) {
   function OnScrapeHandler() {
     handleNameChange(subredditName);
     handleCountChange(postCount);
-    onStart();
+    onStart(subredditName, postCount);
   }
 
   return (

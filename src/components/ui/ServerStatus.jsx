@@ -1,9 +1,10 @@
 import { Badge } from "@chakra-ui/react";
-import { memo } from "react";
+import { memo, useContext } from "react";
 import { CgShapeCircle } from "react-icons/cg";
+import { SubredditContext } from "../../store/SubredditContext.jsx";
 
-function ServerStatus({ status }) {
-  
+function ServerStatus() {
+  const { serverStatus: status } = useContext(SubredditContext);
 
   return (
     <>
@@ -19,4 +20,4 @@ function ServerStatus({ status }) {
   );
 }
 
-export default memo(ServerStatus)
+export default memo(ServerStatus);
