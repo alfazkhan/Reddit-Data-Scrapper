@@ -17,6 +17,7 @@ const userInputSlice = createSlice({
             state.targetPostCount = action.payload
         },
         toggleCachingChange(state, action){
+            console.log("Caching method changed", action)
             state.useOnlyCache = action.payload
         },
     }

@@ -19,8 +19,8 @@ function App() {
   const [cacheSummary, setCacheSummary] = useState([]);
 
 
-  const targetPostCount = useSelector((state) => state.targetPostCount);
-  const useOnlyCache = useSelector((state) => state.useOnlyCache);
+  const targetPostCount = useSelector((state) => state.userInputState.targetPostCount);
+  const useOnlyCache = useSelector((state) => state.userInputState.useOnlyCache);
   const dispatch = useDispatch();
 
   const socketRef = useRef(null);
