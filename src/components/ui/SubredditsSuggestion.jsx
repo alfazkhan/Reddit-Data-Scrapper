@@ -1,6 +1,6 @@
 import { Button, HStack, VStack, Text } from "@chakra-ui/react";
-import { useContext } from "react";
-import { SubredditContext } from "../../store/SubredditContext.jsx";
+import {useDispatch} from "react-redux";
+import {userInputAction} from "../../store/userInput.js"
 
 const Suggestions = [
   { name: "r/India", link: "India" },
@@ -29,7 +29,8 @@ function dateTimeFormatter(rawTimestamp) {
 }
 
 export default function SubredditsSuggestions({ cacheSummary }) {
-  const { handleNameChange, handleCountChange } = useContext(SubredditContext);
+
+  const dispatch = useDispatch()
 
   return (
     <HStack>
@@ -42,8 +43,8 @@ export default function SubredditsSuggestions({ cacheSummary }) {
             fontWeight="black"
             bg="orange.600"
             onClick={() => {
-              handleNameChange(sub.link);
-              handleCountChange(cacheSummary[sub.link]?.count)
+              dispatch(userInputAction.handleNameChange(sub.link));
+              dispatch(userInputAction.handleCountChange(cacheSummary[sub.link]?.count))
             }}
             marginBottom={2}
           >

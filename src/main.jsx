@@ -1,15 +1,16 @@
-import { Provider } from "./components/ui/provider";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import SubredditContextProvider from "./store/SubredditContext";
+import { Provider } from "react-redux";
+import store from "./store/index.js";
+import { ChakraUIProvider } from "./components/ui/provider";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <SubredditContextProvider>
-      <Provider>
+    <ChakraUIProvider>
+      <Provider store={store}>
         <App />
       </Provider>
-    </SubredditContextProvider>
+    </ChakraUIProvider>
   </React.StrictMode>,
 );

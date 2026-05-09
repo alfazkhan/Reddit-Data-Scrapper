@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useContext } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import ServerStatus from "./components/ui/ServerStatus";
 import Header from "./components/ui/Header";
@@ -7,8 +7,10 @@ import UserInput from "./components/ui/UserInput.jsx";
 import SubredditsSuggestions from "./components/ui/SubredditsSuggestion";
 import ProgressBar from "./components/ui/ProgressBar";
 import DataTabs from "./components/ui/DataTabs";
-import { SubredditContext } from "./store/SubredditContext";
 import UpcomingFeatures from "./components/Feature Tracker/UpcomingFeatures";
+
+import { useSelector, useDispatch } from "react-redux";
+import { serverStatusActions } from "./store/serverStatus";
 
 function App() {
   const [progress, setProgress] = useState(0);
@@ -16,30 +18,34 @@ function App() {
   const [processingStatus, setProcessingStatus] = useState(false);
   const [cacheSummary, setCacheSummary] = useState([]);
 
-  const { targetPostCount, useOnlyCache, serverStatusChange } =
-    useContext(SubredditContext);
+
+  const targetPostCount = useSelector((state) => state.targetPostCount);
+  const useOnlyCache = useSelector((state) => state.useOnlyCache);
+  const dispatch = useDispatch();
 
   const socketRef = useRef(null);
   const statusTimerRef = useRef(null);
 
   useEffect(() => {
-    var currentdate = new Date();
-    var datetime =
-      "Last Sync: " +
-      " @ " +
-      currentdate.getHours() +
-      ":" +
-      currentdate.getMinutes() +
-      ":" +
-      currentdate.getSeconds() +
-      ":" +
-      currentdate.getMilliseconds();
+    // var currentdate = new Date();
+    // var datetime =
+    //   "Last Sync: " +
+    //   " @ " +
+    //   currentdate.getHours() +
+    //   ":" +
+    //   currentdate.getMinutes() +
+    //   ":" +
+    //   currentdate.getSeconds() +
+    //   ":" +
+    //   currentdate.getMilliseconds();
 
-    console.log("App.jsx rendered at:", datetime);
+    // console.log("App.jsx rendered at:", datetime);
     const socket = new WebSocket("ws://192.168.0.246:8765");
     socketRef.current = socket;
-    socket.onopen = () => serverStatusChange("online");
-    socket.onclose = () => serverStatusChange("offline");
+    socket.onopen = () =>
+      dispatch(serverStatusActions.serverStatusChange("online"));
+    socket.onclose = () =>
+      dispatch(serverStatusActions.serverStatusChange("offline"));
 
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
@@ -87,7 +93,7 @@ function App() {
       }
 
       if (message.type === "final_data") {
-        console.log(message)
+        console.log(message);
         setProcessingStatus("Process Completed");
         setProgress(100);
         setPosts(message.posts);

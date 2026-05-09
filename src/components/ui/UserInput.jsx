@@ -7,18 +7,19 @@ import {
   Button,
   Checkbox,
 } from "@chakra-ui/react";
-import { useContext, useEffect, useState } from "react";
-import { SubredditContext } from "../../store/SubredditContext.jsx";
+import { useEffect, useState } from "react";
+// import { SubredditContext } from "../../store/SubredditContext.jsx";
+import { userInputAction } from "../../store/userInput";
+
+import {useSelector, useDispatch} from "react-redux"
 
 export default function UserInput({ onStart }) {
-  const {
-    subredditName: subreddit,
-    targetPostCount: targetCount,
-    useOnlyCache: cacheOnly,
-    handleNameChange,
-    handleCountChange,
-    toggleCachingChange,
-  } = useContext(SubredditContext);
+
+
+  const subreddit = useSelector((state)=>state.userInputState.subredditName)
+  const targetCount = useSelector((state)=>state.userInputState.targetPostCount)
+  const cacheOnly = useSelector((state)=>state.userInputState.useOnlyCache)
+  const dispatch = useDispatch()
 
   const [subredditName, setSubredditName] = useState(subreddit);
   const [postCount, setPostCount] = useState(targetCount);
@@ -29,8 +30,8 @@ export default function UserInput({ onStart }) {
   }, [subreddit, targetCount]);
 
   function OnScrapeHandler() {
-    handleNameChange(subredditName);
-    handleCountChange(postCount);
+    dispatch(userInputAction.handleNameChange(subredditName));
+    dispatch(userInputAction.handleCountChange(postCount));
     onStart(subredditName, postCount);
   }
 
@@ -99,7 +100,7 @@ export default function UserInput({ onStart }) {
           variant="solid"
           colorPalette="orange"
           checked={cacheOnly}
-          onCheckedChange={(e) => toggleCachingChange(e.checked)}
+          onCheckedChange={(e) => dispatch(userInputAction.toggleCachingChange(e.checked))}
         >
           <Checkbox.HiddenInput />
           <Checkbox.Control />

@@ -1,10 +1,11 @@
 import { Badge } from "@chakra-ui/react";
-import { memo, useContext } from "react";
+import { memo } from "react";
 import { CgShapeCircle } from "react-icons/cg";
-import { SubredditContext } from "../../store/SubredditContext.jsx";
+import { useSelector } from "react-redux";
 
 function ServerStatus() {
-  const { serverStatus: status } = useContext(SubredditContext);
+  const status = useSelector((state) => state.serverStatusState.serverStatus);
+  console.log(status)
 
   return (
     <>
