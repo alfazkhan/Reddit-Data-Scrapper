@@ -24,8 +24,9 @@ export default function UserInput({ onStart }) {
   const [postCount, setPostCount] = useState(targetCount);
 
   useEffect(() => {
+    setPostCount(targetCount);
     setSubredditName(subreddit);
-  }, [subreddit]);
+  }, [subreddit, targetCount]);
 
   function OnScrapeHandler() {
     handleNameChange(subredditName);
@@ -62,7 +63,8 @@ export default function UserInput({ onStart }) {
               Post Count <Field.RequiredIndicator />
             </Field.Label>
             <NumberInput.Root
-              defaultValue={postCount}
+              defaultValue={100}
+              value={postCount}
               width="full"
               allowMouseWheel
             >
@@ -87,7 +89,12 @@ export default function UserInput({ onStart }) {
           </Button>
         </HStack>
       </HStack>
-      <HStack width="full" gap="1" justifyContent="flex-end" alignItems="center">
+      <HStack
+        width="full"
+        gap="1"
+        justifyContent="flex-end"
+        alignItems="center"
+      >
         <Checkbox.Root
           variant="solid"
           colorPalette="orange"

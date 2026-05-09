@@ -12,15 +12,30 @@ import UpcomingFeatures from "./components/Feature Tracker/UpcomingFeatures";
 
 function App() {
   const [progress, setProgress] = useState(0);
-  const [posts, setPosts] = useState([]); // New state for raw post data
+  const [posts, setPosts] = useState([]);
   const [processingStatus, setProcessingStatus] = useState(false);
-  const [cacheSummary, setCacheSummary] = useState([])
+  const [cacheSummary, setCacheSummary] = useState([]);
 
-  const { targetPostCount, useOnlyCache, serverStatusChange } = useContext(SubredditContext);
+  const { targetPostCount, useOnlyCache, serverStatusChange } =
+    useContext(SubredditContext);
 
   const socketRef = useRef(null);
+  const statusTimerRef = useRef(null);
 
   useEffect(() => {
+    var currentdate = new Date();
+    var datetime =
+      "Last Sync: " +
+      " @ " +
+      currentdate.getHours() +
+      ":" +
+      currentdate.getMinutes() +
+      ":" +
+      currentdate.getSeconds() +
+      ":" +
+      currentdate.getMilliseconds();
+
+    console.log("App.jsx rendered at:", datetime);
     const socket = new WebSocket("ws://192.168.0.246:8765");
     socketRef.current = socket;
     socket.onopen = () => serverStatusChange("online");
@@ -30,7 +45,6 @@ function App() {
       const message = JSON.parse(event.data);
 
       if (message.type === "cache_summary") {
-        serverStatusChange("online");
         console.log(message);
         setCacheSummary(message.message);
       }
@@ -47,7 +61,15 @@ function App() {
 
       if (message.type === "delta_update") {
         console.log(message);
+
+        if (statusTimerRef.current) {
+          clearTimeout(statusTimerRef.current);
+        }
         setProcessingStatus("Receiving deltas...");
+
+        statusTimerRef.current = setTimeout(() => {
+          setProcessingStatus("Scrolling further down...");
+        }, 2000);
         setPosts((posts) => {
           const newPosts = [...posts];
           newPosts.push(message.post);
@@ -57,10 +79,10 @@ function App() {
       }
 
       if (message.type === "partial_data") {
-        console.log(message)
+        console.log(message);
 
         setProcessingStatus("Partial Data received");
-        setProgress(Math.floor((message.posts.length / targetPostCount)*100));
+        setProgress(Math.floor((message.posts.length / targetPostCount) * 100));
         setPosts(message.posts);
       }
 
@@ -71,20 +93,24 @@ function App() {
         setPosts(message.posts);
       }
     };
-    return () => socket.close();
-  }, [targetPostCount]);
+    return () => {
+      if (
+        socket.readyState === WebSocket.OPEN ||
+        socket.readyState === WebSocket.CONNECTING
+      ) {
+        socket.close();
+      }
+    };
+  }, []);
 
-  function StartScraping(subredditName, targetPostCount) {
-    setProcessingStatus("Sending Request...");
+  function StartScraping(subredditName, currentCount) {
     const socket = socketRef.current;
     if (socket?.readyState === WebSocket.OPEN) {
-      setPosts([]);
-      setProgress(0);
       socket.send(
         JSON.stringify({
           type: "start_scrape",
           subreddit: subredditName,
-          count: targetPostCount,
+          count: currentCount,
           useOnlyCache: useOnlyCache,
         }),
       );
@@ -109,7 +135,7 @@ function App() {
         </Flex>
       )}
 
-      {!posts.length !== 0 && ( //Remove ! in the end
+      {posts.length !== 0 && ( //Remove ! in the end
         <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
           <DataTabs postsData={posts} />
         </Flex>

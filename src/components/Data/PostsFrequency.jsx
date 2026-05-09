@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Line } from "react-chartjs-2";
 import { 
   Box, Heading, Text, Flex, HStack, 
-  Field, Select, Input, Badge 
+  Field, Input, Badge, Button 
 } from "@chakra-ui/react";
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
@@ -15,12 +15,33 @@ ChartJS.register(
 );
 
 export default function PostTime({ data }) {
-  // --- State ---
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
 
-  // --- Timezone Options ---
+  // --- New: Logic to automatically select full range ---
+  const handleAllTime = () => {
+    if (!data || data.length === 0) return;
+
+    // Convert timestamps to numbers and filter out any invalid entries
+    const timestamps = data
+      .map(p => new Date(p.timestamp).getTime())
+      .filter(t => !isNaN(t));
+
+    if (timestamps.length === 0) return;
+
+    const minDate = new Date(Math.min(...timestamps));
+    const maxDate = new Date(Math.max(...timestamps));
+
+    // Format to YYYY-MM-DD for the date input using current timezone
+    // 'en-CA' is used as it natively returns YYYY-MM-DD
+    const formatDate = (date) => 
+      date.toLocaleDateString("en-CA", { timeZone: timezone });
+
+    setStartDate(formatDate(minDate));
+    setEndDate(formatDate(maxDate));
+  };
+
   const tzOptions = [
     { label: "My Local Time", value: Intl.DateTimeFormat().resolvedOptions().timeZone },
     { label: "India (IST)", value: "Asia/Kolkata" },
@@ -28,7 +49,6 @@ export default function PostTime({ data }) {
     { label: "UTC", value: "UTC" },
   ];
 
-  // --- Data Processing ---
   const hourlyData = useMemo(() => {
     const counts = Array(24).fill(0);
     
@@ -36,9 +56,7 @@ export default function PostTime({ data }) {
       if (!post.timestamp) return;
       
       const dateObj = new Date(post.timestamp);
-
-      // 1. Get the local date and hour for the CHOSEN timezone
-      const localDate = dateObj.toLocaleDateString("en-CA", { timeZone: timezone }); // YYYY-MM-DD
+      const localDate = dateObj.toLocaleDateString("en-CA", { timeZone: timezone });
       const localHour = parseInt(
         dateObj.toLocaleString("en-US", { 
           hour: "numeric", 
@@ -47,8 +65,6 @@ export default function PostTime({ data }) {
         })
       ) % 24;
 
-      // 2. Filter by Date Range
-      // If no dates are selected, show all. Otherwise, check range.
       const isAfterStart = !startDate || localDate >= startDate;
       const isBeforeEnd = !endDate || localDate <= endDate;
 
@@ -60,10 +76,8 @@ export default function PostTime({ data }) {
     return counts;
   }, [data, startDate, endDate, timezone]);
 
-  const labels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
-
   const chartData = {
-    labels,
+    labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
     datasets: [{
       label: "Post Count",
       data: hourlyData,
@@ -100,7 +114,17 @@ export default function PostTime({ data }) {
           <Text fontSize="xs" color="whiteAlpha.500">Currently showing: {timezone}</Text>
         </Box>
 
-        <HStack gap={4} wrap="wrap">
+        <HStack gap={4} wrap="wrap" alignItems="flex-end">
+          {/* All Time Button */}
+          <Button 
+            size="sm" 
+            variant="outline" 
+            colorPalette="orange" 
+            onClick={handleAllTime}
+          >
+            All Time
+          </Button>
+
           <Field.Root width="auto">
             <Field.Label fontSize="xs">Timezone</Field.Label>
             <select 
@@ -130,7 +154,7 @@ export default function PostTime({ data }) {
       
       {startDate && endDate && (
         <Badge variant="surface" mt={4} colorPalette="orange">
-          Aggregating Data from {startDate} to {endDate}
+          Range: {startDate} to {endDate}
         </Badge>
       )}
     </Box>

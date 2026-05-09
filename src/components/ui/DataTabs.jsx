@@ -5,8 +5,16 @@ import Sentiment from "../Data/Sentiment";
 import KeywordsPieChart from "../Data/KeywordsPieChart";
 import PostsTable from "../Data/PostsTable";
 import PostsFrequency from "../Data/PostsFrequency";
+import { useEffect } from "react";
 
 export default function DataTabs({ postsData }) {
+
+useEffect(() => {
+  console.log("Data Tabs Rendered at", Date.now())
+
+}, [])
+
+
   const TabsListData = [
     {
       value: "Sentiments",
@@ -39,7 +47,7 @@ export default function DataTabs({ postsData }) {
     <Tabs.Root
       defaultValue="Posts Frequency"
       variant="plain"
-      // lazyMount
+      lazyMount
       // unmountOnExit
       width="auto"
       fitted
