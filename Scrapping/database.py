@@ -10,7 +10,9 @@ async def get_db_pool():
     """Creates a persistent connection pool for high-performance DB access."""
     global _pool
     if _pool is None:
+        print("Database: Initializing connection pool...")
         _pool = await asyncpg.create_pool(**DB_CONFIG)
+        print("Database: Connection pool established.")
     return _pool
 
 def safe_parse_timestamp(ts_str: str):
@@ -53,7 +55,6 @@ async def load_posts_from_db(subreddit: str, limit: int):
             if d.get('timestamp'):
                 d['timestamp'] = d['timestamp'].isoformat()
             
-            # Ensure JSONB columns are parsed back to objects
             for key in ['keywords', 'entities']:
                 if isinstance(d.get(key), str):
                     d[key] = json.loads(d[key])
@@ -68,6 +69,7 @@ async def get_cache_summary():
             SELECT subreddit, COUNT(*) as post_count, MAX(timestamp) as last_post_time 
             FROM reddit_posts GROUP BY subreddit
         ''')
+        print(f"Database: Summary generated for {len(rows)} subreddits.")
         return {
             row['subreddit']: {
                 "count": row['post_count'],
