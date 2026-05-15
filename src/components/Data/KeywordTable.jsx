@@ -98,8 +98,8 @@ export default function KeywordTable({ data }) {
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {chartData.map((item) => (
-              <Table.Row key={item.id} color="orange.600">
+            {chartData.map((item,idx) => (
+              <Table.Row key={idx} color="orange.600">
                 <Table.Cell>{item.name}</Table.Cell>
                 <Table.Cell>{item.value}</Table.Cell>
               </Table.Row>

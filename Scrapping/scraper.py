@@ -1,112 +1,142 @@
 import os
 import asyncio
 import json
+import logging
 from playwright.async_api import async_playwright
-from config import AUTH_FILE, semaphore, IGNORE_WORDS
-from database import load_posts_from_db, save_post_to_db
+from config import AUTH_FILE, semaphore
+from database import (
+    save_post_to_db, get_archived_ids, get_queued_ids, add_to_queue, 
+    update_queue_status, get_queue_tasks_by_status, get_db_pool,
+    get_oldest_post_id
+)
 from nlp_processor import get_sentiment, extract_keywords, extract_entities
 
 async def get_post_metadata(post):
-    """Retrieves unique ID and timestamp from a shreddit-post element."""
-    pid = await post.get_attribute("id")
-    time_loc = post.locator("time").first
-    ts = await time_loc.get_attribute("datetime") if await time_loc.count() > 0 else ""
-    return pid, ts
+    try:
+        pid = await post.get_attribute("id")
+        time_loc = post.locator("time").first
+        ts = await time_loc.get_attribute("datetime") if await time_loc.count() > 0 else ""
+        return pid, ts
+    except Exception: return None, ""
 
-async def scrape_single_post(context, url, pid, ts, websocket, total, tracker, cache, subreddit, is_priority):
-    """Deep-scrapes a single post thread and runs NLP analysis."""
+async def scrape_by_id(context, post_id, subreddit, websocket=None):
+    """Deep-scrapes a post with full hydration waits to prevent [null] data."""
     async with semaphore:
         page = await context.new_page()
-        await page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        clean_id = post_id.replace("t3_", "")
+        url = f"https://www.reddit.com/r/{subreddit}/comments/{clean_id}"
         
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=45000)
+            logging.info(f"Scraper: Opening {clean_id}...")
+            await page.goto(url, wait_until="load", timeout=45000)
             
-            title = "[Title Not Found]"
-            for sel in ['h1[slot="title"]', 'h1[id^="post-title-"]', 'shreddit-title', 'h1']:
-                loc = page.locator(sel).first
-                if await loc.is_visible(timeout=3000):
-                    title = await loc.inner_text(); break
+            # Wait for content rendering
+            await page.wait_for_function(
+                "() => document.querySelector('h1') && document.querySelector('h1').innerText.trim().length > 0",
+                timeout=20000
+            )
 
-            content = ""
-            for sel in ['shreddit-post-text-body', 'div[slot="text-body"]']:
-                loc = page.locator(sel).first
-                if await loc.count() > 0:
-                    content = await loc.inner_text(timeout=3000)
-                    if content: break
-            
-            full_text = f"{title} {content}"
+            title = await page.locator('h1').first.inner_text()
+            if "reddit" in title.lower() and len(title) < 15:
+                await update_queue_status(post_id, 'failed')
+                return False
+
+            # Ensure timestamp component is rendered
+            await page.wait_for_selector("time[datetime]", timeout=10000)
+
+            body_loc = page.locator('shreddit-post-text-body').first
+            content = await body_loc.inner_text() if await body_loc.count() > 0 else ""
+            time_loc = page.locator('time').first
+            ts = await time_loc.get_attribute('datetime') if await time_loc.count() > 0 else ""
+
             post_entry = {
-                "id": pid, "timestamp": ts, "title": title, "body": content,
-                "sentiment": get_sentiment(full_text),
-                "keywords": extract_keywords(full_text, IGNORE_WORDS),
-                "entities": extract_entities(full_text)
+                "id": post_id, "timestamp": ts, "title": title, "body": content,
+                "sentiment": get_sentiment(f"{title} {content}"),
+                "keywords": extract_keywords(f"{title} {content}", set()),
+                "entities": extract_entities(f"{title} {content}")
             }
-
-            cache[pid] = post_entry
-            await save_post_to_db(post_entry, subreddit)
-
-            if is_priority and websocket and websocket.state.name == 'OPEN':
-                tracker['ui_processed'] += 1
-                progress = int((tracker['ui_processed'] / total) * 100)
-                print(f"Scraper: [{progress}%] Processed post: {title[:40]}...")
-                await websocket.send(json.dumps({"type": "delta_update", "post": post_entry, "progress": progress}))
-            else:
-                print(f"Scraper: Background cached: {title[:40]}...")
             
-            return post_entry
+            await save_post_to_db(post_entry, subreddit)
+            await update_queue_status(post_id, 'completed')
+            if websocket: await websocket.send(json.dumps({"type": "delta_update", "post": post_entry}))
+            logging.info(f"Scraper: Archived ID {post_id}.")
+            return True
         except Exception as e:
-            print(f"Scraper Error: Failed to process {url}. Error: {e}")
+            logging.error(f"Scraper: Error processing {post_id}: {e}")
+            await update_queue_status(post_id, 'failed')
+            return False
         finally:
-            await page.close()
-
-async def run_scraper(websocket, subreddit, count, use_only_cache=False):
-    """Orchestrates the scraping flow or loads from cache."""
-    print(f"Scraper: Request received for r/{subreddit} (Count: {count})")
-    cache = await load_posts_from_db(subreddit, int(count))
+            if not page.is_closed(): await page.close()
+            
+async def discover_subreddit_posts_v2(subreddit, stop_mode='routine', headless=False):
+    """
+    New Discovery Logic: Stops immediately if it hits a post already in 
+    the archive OR already in the queue.
+   
+    """
+    archived_ids = await get_archived_ids(subreddit)
+    queued_ids = await get_queued_ids(subreddit) # IDs in queue (pending, completed, or failed)
+    oldest_id = await get_oldest_post_id(subreddit)
     
-    if use_only_cache:
-        print(f"Scraper: Loading {len(cache)} posts from database cache only.")
-        final_selection = sorted(cache.values(), key=lambda x: x.get("timestamp") or "", reverse=True)[:count]
-        if websocket:
-            await websocket.send(json.dumps({"type": "final_data", "posts": final_selection}))
-        return 
+    # For Stop logic, we consider any ID we already 'know' as a boundary
+    all_known_ids = archived_ids | queued_ids 
 
     async with async_playwright() as p:
-        ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        print("Scraper: Launching browser...")
-        browser = await p.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled"])
-        context = await browser.new_context(user_agent=ua, storage_state=AUTH_FILE if os.path.exists(AUTH_FILE) else None)
-        
-        main_page = await context.new_page()
-        print(f"Scraper: Navigating to r/{subreddit}/new")
-        await main_page.goto(f"https://www.reddit.com/r/{subreddit}/new")
-
-        launched_ids, scrape_tasks, tracker = set(), [], {'ui_processed': 0}
-        
-        while len(scrape_tasks) < count:
-            posts = await main_page.locator('shreddit-post').all()
-            new_found = False
-            for p_element in posts:
-                if len(scrape_tasks) >= count: break
-                pid, ts = await get_post_metadata(p_element)
-                if not pid or pid in launched_ids or pid in cache: continue
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(storage_state=AUTH_FILE if os.path.exists(AUTH_FILE) else None)
+        page = await context.new_page()
+        try:
+            await page.goto(f"https://www.reddit.com/r/{subreddit}/new", wait_until="load")
+            stop_scrolling = False
+            
+            while not stop_scrolling:
+                posts = await page.locator('shreddit-post').all()
+                scroll_new_ids = []
                 
-                launched_ids.add(pid)
-                new_found = True
-                href = await p_element.locator('a[slot="full-post-link"]').first.get_attribute('href')
-                if href:
-                    url = f"https://www.reddit.com{href}"
-                    scrape_tasks.append(scrape_single_post(context, url, pid, ts, websocket, count, tracker, cache, subreddit, bool(websocket)))
+                for p_el in posts:
+                    pid, _ = await get_post_metadata(p_el)
+                    if not pid: continue
+                    
+                    # NEW STOP LOGIC: Stop if we hit ANYTHING already known (Archived or Queued)
+                    if stop_mode == 'routine' and pid in all_known_ids:
+                        logging.info(f"Discovery V2: Hit known boundary post {pid}. Stopping scroll.")
+                        stop_scrolling = True
+                        break
+                    
+                    # BOOTSTRAP STOP: Still stops at absolute oldest record
+                    if stop_mode == 'bootstrap' and pid == oldest_id:
+                        logging.info(f"Discovery V2: Reached historical boundary {pid}. Stopping.")
+                        stop_scrolling = True
+                        break
+                        
+                    if pid not in all_known_ids:
+                        scroll_new_ids.append(pid)
+                        all_known_ids.add(pid)
+                
+                if scroll_new_ids:
+                    pool = await get_db_pool()
+                    async with pool.acquire() as conn:
+                        await add_to_queue(conn, scroll_new_ids, subreddit)
 
-            if not new_found:
-                print("Scraper: No more new posts found on page.")
-                break
+                if stop_scrolling: break
+                
+                js_scroll_safe = "(document.scrollingElement || document.documentElement || document.body || {scrollHeight: 0})"
+                prev_h = await page.evaluate(f"{js_scroll_safe}.scrollHeight")
+                await page.evaluate(f"window.scrollTo(0, {js_scroll_safe}.scrollHeight)")
+                await asyncio.sleep(4)
+                curr_h = await page.evaluate(f"{js_scroll_safe}.scrollHeight")
+                if curr_h == prev_h: break
+        finally:
+            await browser.close()
 
-            await main_page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-            await asyncio.sleep(2)
 
-        print(f"Scraper: Executing {len(scrape_tasks)} deep-scrape tasks...")
-        await asyncio.gather(*scrape_tasks)
-        print(f"Scraper: r/{subreddit} session complete.")
-        await browser.close()
+async def run_queue_worker(subreddit, limit=15, status='pending', websocket=None, headless=False):
+    tasks = await get_queue_tasks_by_status(subreddit, status, limit)
+    if not tasks: return
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(storage_state=AUTH_FILE if os.path.exists(AUTH_FILE) else None)
+        try:
+            # Process sequentially for clear logs
+            for t in tasks: await scrape_by_id(context, t['post_id'], subreddit, websocket)
+        finally: await browser.close()

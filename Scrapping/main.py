@@ -1,66 +1,79 @@
 import asyncio
 import websockets
 import json
+import logging
+import sys
+from datetime import datetime
 from config import SCRAPE_INTERVAL
-from database import get_cache_summary
-from scraper import run_scraper
+from database import (
+    get_cache_summary, get_db_pool, load_posts_from_db, 
+    get_last_post_timestamp, is_subreddit_bootstrapped
+)
+from scraper import discover_subreddit_posts_v2, run_queue_worker
 
-# Lock to ensure only one browser process runs at a time
+logging.basicConfig(
+    level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S', handlers=[logging.StreamHandler(sys.stdout)], force=True
+)
+
 is_scraping = asyncio.Lock()
 background_subreddits = ["Mumbai", "India", "Munich", "AskIndianWomen", "LegalAdviceIndia", "BoycottIsrael"]
 
 async def background_worker():
-    """Automatically updates the database for specific subreddits every 15 minutes."""
+    """Smart Worker updated to use the more aggressive Stop-at-Known logic."""
     while True:
-        print("Worker: Starting background update cycle...")
+        logging.info("Worker: Starting background cycle.")
         for sub in background_subreddits:
-            if is_scraping.locked():
-                print(f"Worker: UI task in progress, skipping r/{sub} for now.")
-                await asyncio.sleep(60)
-                continue
-                
             async with is_scraping:
-                print(f"Worker: Updating r/{sub}...")
                 try:
-                    await run_scraper(None, sub, 15)
-                except Exception as e:
-                    print(f"Worker Error on r/{sub}: {e}")
-            await asyncio.sleep(10) # Cooling period
-        
-        print(f"Worker: Cycle complete. Sleeping for {SCRAPE_INTERVAL} seconds.")
+                    # 1. RETRY FAILED
+                    await run_queue_worker(sub, limit=50, status='failed', headless=False)
+                    
+                    # 2. DISCOVERY
+                    is_booted = await is_subreddit_bootstrapped(sub)
+                    last_ts = await get_last_post_timestamp(sub)
+                    gap = (datetime.now() - last_ts).total_seconds() if last_ts else 3601
+                    
+                    if not is_booted:
+                        logging.info(f"Worker: FIRST RUN for r/{sub}. Bootstrap scan.")
+                        # REPLACED CALL: Points to v2 logic
+                        await discover_subreddit_posts_v2(sub, stop_mode='bootstrap', headless=False)
+                    elif gap > 3600:
+                        logging.info(f"Worker: Routine update for r/{sub} (Gap: {int(gap/60)}m).")
+                        # REPLACED CALL: Points to v2 logic
+                        await discover_subreddit_posts_v2(sub, stop_mode='routine', headless=False)
+                    
+                    # 3. PENDING
+                    await run_queue_worker(sub, limit=15, status='pending', headless=False)
+                except Exception as e: 
+                    logging.error(f"Worker Error r/{sub}: {e}")
+            await asyncio.sleep(10)
         await asyncio.sleep(SCRAPE_INTERVAL)
 
 async def handler(websocket):
-    """Handles real-time commands from the UI via WebSockets."""
-    print("Server: New UI client connected.")
+    logging.info("Server: UI Connected.")
     try:
         summary = await get_cache_summary()
         await websocket.send(json.dumps({"type": "cache_summary", "message": summary}))
-
         async for message in websocket:
             data = json.loads(message)
             if data.get('type') == 'start_scrape':
-                sub = data.get('subreddit', 'unknown')
-                print(f"Server: UI requested scrape for r/{sub}")
+                sub, count, use_cache = data.get('subreddit'), data.get('count', 10), data.get('useOnlyCache', False)
+                if use_cache:
+                    posts = await load_posts_from_db(sub, count)
+                    await websocket.send(json.dumps({"type": "final_data", "posts": sorted(posts.values(), key=lambda x: x['timestamp'] or '', reverse=True)[:count]}))
+                    continue
                 async with is_scraping:
-                    await run_scraper(websocket, sub, data['count'], data.get('useOnlyCache', False))
-                print(f"Server: UI request for r/{sub} finished.")
-    except websockets.exceptions.ConnectionClosed:
-        print("Server: UI client disconnected.")
-    except Exception as e:
-        print(f"Server Error: {e}")
+                    # UI priority also clears failures and runs discovery
+                    await run_queue_worker(sub, limit=30, status='failed', headless=False)
+                    #await discover_subreddit_posts(sub, stop_mode='routine', headless=False)
+                    await discover_subreddit_posts_v2(sub, stop_mode='routine', headless=False)
+                    await run_queue_worker(sub, limit=count, websocket=websocket, headless=False)
+    except Exception as e: logging.error(f"Server Error: {e}")
 
 async def main():
-    """Entry point to start the BI data pipeline."""
-    print("Starting services...")
     server = websockets.serve(handler, "192.168.0.246", 8765)
-    print("WebSocket server listening on ws://192.168.0.246:8765")
-    
-    # Run server and background worker concurrently
     await asyncio.gather(server, background_worker())
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Shutdown requested by user.")
+    asyncio.run(main())
