@@ -115,12 +115,8 @@ async def load_posts_from_db(subreddit_name: str, limit: int):
             data_dict[d['id']] = d
         return data_dict
 
-# --- NEW FUNCTION: RETRIEVE ENTIRE ARCHIVE ---
 async def load_all_posts_from_db(subreddit_name: str):
-    """
-    Fetches all archived posts for a subreddit without a limit.
-   
-    """
+    """Fetches all archived posts for a subreddit without a limit."""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('''
@@ -143,3 +139,10 @@ async def get_cache_summary():
             LEFT JOIN reddit_posts p ON s.id = p.subreddit_id GROUP BY s.name
         ''')
         return {r['name']: {"count": r['count'], "last_updated": r['last_updated'].isoformat() if r['last_updated'] else None} for r in rows}
+
+async def get_active_subreddits():
+    """Fetches a list of subreddits where keep_updated flag evaluates to true."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT name FROM subreddits WHERE keep_updated = TRUE")
+        return [row['name'] for row in rows]

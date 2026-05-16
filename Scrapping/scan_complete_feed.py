@@ -14,11 +14,22 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 
+# Determine execution environment context
+IS_PRODUCTION = os.getenv("APP_ENV") == "production"
+headless_mode = True if IS_PRODUCTION else False
+
 async def get_post_id(post):
     try:
         return await post.get_attribute("id")
     except Exception:
         return None
+
+async def get_active_subreddits():
+    """Queries the database for all subreddits marked for active updates."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT name FROM subreddits WHERE keep_updated = TRUE")
+        return [row['name'] for row in rows]
 
 async def scan_entire_feed(subreddit, headless=False):
     """
@@ -31,7 +42,15 @@ async def scan_entire_feed(subreddit, headless=False):
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=headless)
-        context = await browser.new_context(storage_state=AUTH_FILE if os.path.exists(AUTH_FILE) else None)
+        
+        # Production Stealth Context Override to prevent anti-bot blocks
+        context = await browser.new_context(
+            storage_state=AUTH_FILE if os.path.exists(AUTH_FILE) else None,
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            viewport={"width": 1920, "height": 1080},
+            locale="en-US",
+            timezone_id="America/New_York"
+        )
         page = await context.new_page()
         try:
             await page.goto(f"https://www.reddit.com/r/{subreddit}/new", wait_until="load")
@@ -56,27 +75,36 @@ async def scan_entire_feed(subreddit, headless=False):
                 await asyncio.sleep(4)
                 if (await page.evaluate(f"{js_scroll_safe}.scrollHeight")) == prev_h:
                     break
+            logging.info(f"Finished exhaustive scan for r/{subreddit}. Discovered {total_discovered} new tasks.")
         finally:
             await browser.close()
 
 async def scan_multiple_feeds(subreddit_list, headless=False):
     """
     Iterates through a list of subreddits and runs the scan for each.
-   
     """
     logging.info(f"Batch scan initiated for: {', '.join(subreddit_list)}")
     for sub in subreddit_list:
         try:
-            # We call the existing function for each sub to ensure logic consistency
             await scan_entire_feed(sub, headless=headless)
         except Exception as e:
             logging.error(f"Failed to scan r/{sub}: {e}")
-        # Short cooldown between subreddits to be polite to the CPU
         await asyncio.sleep(5)
     logging.info("All requested subreddit scans are complete.")
 
+async def main():
+    try:
+        logging.info("Fetching active target list from database...")
+        subreddits = await get_active_subreddits()
+    except Exception as e:
+        logging.error(f"Database error while resolving tracking list: {e}")
+        return
+
+    if not subreddits:
+        logging.warning("No subreddits found with keep_updated = TRUE inside database tables.")
+        return
+
+    await scan_multiple_feeds(subreddits, headless=headless_mode)
+
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        asyncio.run(scan_multiple_feeds(sys.argv[1:], headless=False))
-    else:
-        print("Usage: python scan_complete_feed.py sub1 sub2 sub3 ...")
+    asyncio.run(main())

@@ -8,7 +8,8 @@ from datetime import datetime
 from config import SCRAPE_INTERVAL
 from database import (
     get_cache_summary, get_db_pool, load_posts_from_db, 
-    load_all_posts_from_db, get_last_post_timestamp, is_subreddit_bootstrapped
+    load_all_posts_from_db, get_last_post_timestamp, is_subreddit_bootstrapped,
+    get_active_subreddits
 )
 from scraper_v2 import run_discovery_cycle, process_queue_batch
 
@@ -16,7 +17,7 @@ from scraper_v2 import run_discovery_cycle, process_queue_batch
 IS_PRODUCTION = os.getenv("APP_ENV") == "production"
 
 # Assign environmental runtime variables
-headlessMode = True if IS_PRODUCTION else False
+headlessMode = True if IS_PRODUCTION else True
 API_HOST = "0.0.0.0" if IS_PRODUCTION else "192.168.0.246"
 
 app = FastAPI(title="Reddit BI REST API", version="2.1.0")
@@ -27,7 +28,6 @@ logging.basicConfig(
 )
 
 is_scraping = asyncio.Lock()
-background_subreddits = ["Mumbai", "India", "Munich", "AskIndianWomen", "LegalAdviceIndia", "BoycottIsrael"]
 
 @app.get("/summary")
 async def api_get_summary():
@@ -49,6 +49,16 @@ async def api_get_all_posts(subreddit: str):
 async def background_worker():
     while True:
         logging.info("Worker: Starting background maintenance cycle.")
+        
+        try:
+            background_subreddits = await get_active_subreddits()
+        except Exception as database_error:
+            logging.error(f"Worker Error pulling targeted subreddits: {database_error}")
+            background_subreddits = []
+
+        if not background_subreddits:
+            logging.warning("Worker: No active target targets tracked inside database schema.")
+        
         for sub in background_subreddits:
             logging.info(f"Worker: Processing targeting checks for r/{sub}")
             async with is_scraping:
