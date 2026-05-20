@@ -79,125 +79,16 @@ export default function UpcomingFeatures() {
         </Heading>
       </Collapsible.Trigger>
       <Collapsible.Content>
-        <Box
-          width="full"
-          height="80vh"
-          overflowX="auto"
-          overflowY="auto"
-          p="5"
-          bg="blackAlpha.50"
-          borderRadius="xl"
-          css={{
-            "&::-webkit-scrollbar": {
-              width: "8px",
-              height: "8px",
-            },
-            "&::-webkit-scrollbar-track": {
-              background: "transparent",
-            },
-            "&::-webkit-scrollbar-thumb": {
-              background: "rgb(255, 133, 72)",
-              borderRadius: "20px",
-              border: "2px solid transparent",
-              backgroundClip: "content-box",
-            },
-            "&::-webkit-scrollbar-thumb:hover": {
-              background: "orange.600",
-            },
-            scrollbarWidth: "thin",
-            scrollbarColor: "rgb(255, 133, 72) transparent",
+        <iframe
+          src="https://tundra-monitor-40c.notion.site/ebd//8d0b8016801b4327bc1f61da619c353f?v=b668abc7fa5644feb0e94997b554d8a1"
+          width="100%"
+          height="600"
+          frameborder="0"
+          allowfullscreen
+          style={{
+            marginTop: "-50px"
           }}
-        >
-          <HStack
-            alignItems="flex-start"
-            gap="6"
-            height="full"
-            overflowY="auto"
-          >
-            {boardData.map((list) => (
-              <VStack
-                key={list.id}
-                width="1/2"
-                flex="1"
-                bg="whiteAlpha.100"
-                p="4"
-                borderRadius="lg"
-                alignItems="stretch"
-                maxHeight="full"
-                minH="200px"
-                overflowY="auto"
-                css={{
-                  "&::-webkit-scrollbar": {
-                    width: "8px",
-                    height: "8px",
-                  },
-                  "&::-webkit-scrollbar-track": {
-                    background: "transparent",
-                  },
-                  "&::-webkit-scrollbar-thumb": {
-                    background: "rgba(255, 255, 255, 0.1)",
-                    borderRadius: "20px",
-                    border: "2px solid transparent",
-                    backgroundClip: "content-box",
-                  },
-                  "&::-webkit-scrollbar-thumb:hover": {
-                    background: "orange.600",
-                  },
-                  scrollbarWidth: "thin",
-                  scrollbarColor: "rgba(255, 255, 255, 0.1) transparent",
-                }}
-              >
-                <Heading size="sm" mb="4" color="orange.500">
-                  {list.title}
-                </Heading>
-
-                <Stack
-                  gap="4"
-                  css={{
-                    "&::-webkit-scrollbar": {
-                      display: "none",
-                    },
-                    msOverflowStyle: "none",
-                    scrollbarWidth: "none",
-                  }}
-                >
-                  {list.cards.length > 0 ? (
-                    list.cards.map((item) => (
-                      <Card.Root key={item.id} variant="outline" bg="gray.900">
-                        <Card.Body p="4">
-                          <Badge
-                            colorPalette={
-                              item.type === "Frontend" ? "blue" : "yellow"
-                            }
-                            mb="2"
-                          >
-                            {item.type === "Frontend" ? "React" : "Python"}
-                          </Badge>
-                          <Text fontWeight="medium" color="white">
-                            {item.title}
-                          </Text>
-                        </Card.Body>
-                      </Card.Root>
-                    ))
-                  ) : (
-                    // 5. Visual feedback for empty columns
-                    <Text
-                      fontSize="xs"
-                      color="whiteAlpha.400"
-                      textAlign="center"
-                      py="10"
-                      borderStyle="dashed"
-                      borderWidth="1px"
-                      borderRadius="md"
-                    >
-                      Nothing in "{list.title}""
-                    </Text>
-                  )}
-                </Stack>
-              </VStack>
-            ))}
-          </HStack>
-        </Box>
+        />
       </Collapsible.Content>
     </Collapsible.Root>
   );

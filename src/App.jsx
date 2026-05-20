@@ -158,10 +158,10 @@ function App() {
           <DataTabs postsData={posts} processingStatus={processingStatus}/>
         </Flex>
       )}
-{/* 
+
       <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
         <UpcomingFeatures />
-      </Flex> */}
+      </Flex>
     </Flex>
   );
 }
