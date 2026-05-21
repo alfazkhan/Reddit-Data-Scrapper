@@ -44,10 +44,11 @@ export default function SubredditsSuggestions({ cacheSummary }) {
             fontWeight="black"
             bg="orange.600"
             onClick={() => {
-              dispatch(userInputAction.handleNameChange(sub));
+              dispatch(userInputAction.handleNameChange(`${sub}`));
               dispatch(userInputAction.handleCountChange(cacheSummary[sub]?.count))
             }}
             marginBottom={2}
+            minW={"100px"}
           >
             {sub}
           </Button>

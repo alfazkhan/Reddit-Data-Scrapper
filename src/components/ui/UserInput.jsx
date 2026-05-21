@@ -59,7 +59,7 @@ export default function UserInput({ onFetchData, cacheSummary, processingStatus 
           <Select.Root
             collection={selectCollection}
             onValueChange={(e) => setSubredditName(e.value[0] || "")}
-            defaultValue={["AskIndianWomen"]}
+            value={[subreddit]}
           >
             <Select.HiddenSelect required />
             <Field.Label >

@@ -1,73 +1,70 @@
 import asyncio
 import logging
 import sys
-import os
+import json
 from database.subreddits import get_active_subreddits
-from database.posts import get_post_content_for_reanalysis, update_post_keywords_only
+from database.posts import get_post_keywords_for_cleaning, update_post_keywords_only
 from database.ignored_words import get_all_ignored_words
-from nlp_processor import extract_keywords
 
-# Configure standalone logging suitable for background tracking
 logging.basicConfig(
     level=logging.INFO,
-    format='[%(asctime)s] KEYWORD-REFRESH: %(message)s',
+    format='[%(asctime)s] KEYWORD-PURGE: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     handlers=[logging.StreamHandler(sys.stdout)],
     force=True
 )
 
-async def process_subreddit_keywords(subreddit: str, ignored_words: set):
-    """Fetches text, recalculates keywords, and updates the database via fast-lane."""
-    logging.info(f"r/{subreddit} | Starting background keyword refresh...")
-    posts = await get_post_content_for_reanalysis(subreddit)
+async def purge_subreddit_keywords(subreddit: str, ignored_words: set):
+    """Purges ignored words directly out of stored keyword dictionaries without re-tokenizing."""
+    logging.info(f"r/{subreddit} | Starting background keyword dictionary purge...")
+    posts = await get_post_keywords_for_cleaning(subreddit)
     
     total_posts = len(posts)
     if not total_posts:
-        logging.info(f"r/{subreddit} | No posts found. Skipping.")
+        logging.info(f"r/{subreddit} | No cached keywords discovered. Skipping.")
         return
 
     log_interval = max(1, total_posts // 10)
 
     for count, row in enumerate(posts, 1):
         pid = row['id']
-        combined_text = f"{row['title'] or ''} {row['body'] or ''}"
         
-        # Fast extraction using only NLTK and the dynamic database list
-        raw_keywords = extract_keywords(combined_text, ignored_words)
-        keywords = list(raw_keywords) if isinstance(raw_keywords, set) else raw_keywords
+        # Safely load the pre-extracted keyword dictionary
+        try:
+            current_keywords = json.loads(row['keywords']) if isinstance(row['keywords'], str) else row['keywords'] or {}
+        except Exception:
+            current_keywords = {}
+
+        # Dictionary Comprehension fast-lane: drop keys without calling NLP tokenizers
+        cleaned_keywords = {k: v for k, v in current_keywords.items() if k not in ignored_words}
         
-        # Execute the fast-lane update
-        await update_post_keywords_only(pid, keywords)
+        # Push back down if modifications occurred
+        await update_post_keywords_only(pid, cleaned_keywords)
         
-        # Periodic server log output
         if count % log_interval == 0 or count == total_posts:
             percent = round((count / total_posts) * 100, 1)
-            logging.info(f"r/{subreddit} | Progress: {count}/{total_posts} records updated ({percent}%)")
+            logging.info(f"r/{subreddit} | Purge Progress: {count}/{total_posts} records updated ({percent}%)")
             
-        # Yield execution control briefly to prevent CPU locking on the server
-        if count % 100 == 0:
-            await asyncio.sleep(0.01)
+        if count % 250 == 0:
+            await asyncio.sleep(0.001)
 
 async def main():
-    logging.info("Starting Headless Keyword Refresh Engine...")
-    
+    logging.info("Starting Headless Keyword Purge Engine...")
     try:
         subreddits = await get_active_subreddits()
         if not subreddits:
-            logging.warning("No active subreddits found.")
+            logging.warning("No active subreddits tracked inside systems.")
             return
 
-        # Fetch the ignored words exactly once before processing all subreddits
         ignored_words = await get_all_ignored_words()
-        logging.info(f"Fetched {len(ignored_words)} ignored words from database.")
+        logging.info(f"Loaded {len(ignored_words)} ignored words into processing matrix.")
 
         for sub in subreddits:
-            await process_subreddit_keywords(sub, ignored_words)
+            await purge_subreddit_keywords(sub, ignored_words)
 
-        logging.info("Complete background keyword refresh finished successfully.")
-        
+        logging.info("Headless keyword dictionary cleaning operations finished successfully.")
     except Exception as e:
-        logging.error(f"Fatal Engine Error: {e}")
+        logging.error(f"Fatal Engine Exception: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())

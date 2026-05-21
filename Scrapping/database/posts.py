@@ -82,7 +82,6 @@ async def load_all_posts_from_db(subreddit_name: str):
 async def get_cache_summary():
     pool = await get_db_pool()
     async with pool.acquire() as conn:
-        # Added WHERE s.is_active = TRUE to filter out inactive subreddits
         rows = await conn.fetch('''
             SELECT s.name, COUNT(p.id) as count, MAX(p.timestamp) as last_updated 
             FROM subreddits s 
@@ -102,6 +101,17 @@ async def get_post_content_for_reanalysis(subreddit_name: str):
         ''', subreddit_name)
         return [dict(row) for row in rows]
 
+async def get_post_keywords_for_cleaning(subreddit_name: str):
+    """Fetches ONLY the post IDs and pre-existing extracted keywords for lightning-fast purification."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch('''
+            SELECT p.id, p.keywords FROM reddit_posts p
+            JOIN subreddits s ON p.subreddit_id = s.id
+            WHERE s.name = $1
+        ''', subreddit_name)
+        return [dict(row) for row in rows]
+
 async def update_post_nlp_data(post_id: str, sentiment: str, keywords: list, entities: dict):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
@@ -111,7 +121,7 @@ async def update_post_nlp_data(post_id: str, sentiment: str, keywords: list, ent
             WHERE id = $4
         ''', sentiment, json.dumps(keywords), json.dumps(entities), post_id)
 
-async def update_post_keywords_only(post_id: str, keywords: list):
+async def update_post_keywords_only(post_id: str, keywords: dict):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         await conn.execute('''
