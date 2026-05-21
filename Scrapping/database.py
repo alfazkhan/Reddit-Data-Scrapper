@@ -212,7 +212,6 @@ async def db_delete_subreddit(name: str):
         return status == "DELETE 1"
     
     
-# --- ADD THESE TO THE BOTTOM OF database.py ---
 
 async def get_post_content_for_reanalysis(subreddit_name: str):
     """Fetches the title and body of all archived posts locally for CPU processing."""
@@ -245,3 +244,10 @@ async def force_requeue_posts(post_ids: list, subreddit_name: str):
             VALUES ($1, (SELECT id FROM subreddits WHERE name = $2), 'pending')
             ON CONFLICT (post_id) DO UPDATE SET status = 'pending'
         ''', [(pid, subreddit_name) for pid in post_ids])
+        
+async def get_all_ignored_words() -> set:
+    """Fetches the active list of ignored words from the database at the time of execution."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT word FROM ignored_words")
+        return {row['word'] for row in rows}

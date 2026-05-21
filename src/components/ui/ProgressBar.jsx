@@ -9,9 +9,10 @@ export default function ProgressBar({ value, processingStatus }) {
       variant="subtle"
       value={value}
       size="lg"
+      w={"100%"}
     >
       <Progress.Label marginBottom="2">{processingStatus}</Progress.Label>
-      <HStack gap="5">
+      <HStack gap="5" >
         <Progress.Track flex="1">
           <Progress.Range />
         </Progress.Track>

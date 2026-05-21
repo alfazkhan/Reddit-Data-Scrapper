@@ -6,7 +6,7 @@ from config import AUTH_FILE, semaphore
 from database import (
     save_post_to_db, get_archived_ids, get_queued_ids, add_to_queue, 
     update_queue_status, get_queue_tasks_by_status, get_db_pool,
-    get_oldest_post_id
+    get_oldest_post_id, get_all_ignored_words
 )
 from nlp_processor import get_sentiment, extract_keywords, extract_entities
 
@@ -20,10 +20,11 @@ async def get_post_metadata(post):
     except Exception:
         return None, ""
 
-async def scrape_post_by_id(context, post_id: str, subreddit_name: str):
+async def scrape_post_by_id(context, post_id: str, subreddit_name: str, ignored_words: set):
     """
     Performs a deep scrape of a single post URL.
     Optimized with native shadow-piercing locators and structural fallbacks.
+    Accepts a dynamic set of ignored words to pass down to the NLP processor.
     """
     async with semaphore:
         page = await context.new_page()
@@ -63,14 +64,16 @@ async def scrape_post_by_id(context, post_id: str, subreddit_name: str):
             time_loc = page.locator('time').first
             ts = await time_loc.get_attribute('datetime') if await time_loc.count() > 0 else ""
 
+            combined_text = f"{title} {content}"
+
             post_entry = {
                 "id": post_id, 
                 "timestamp": ts, 
                 "title": title, 
                 "body": content,
-                "sentiment": get_sentiment(f"{title} {content}"),
-                "keywords": extract_keywords(f"{title} {content}", set()),
-                "entities": extract_entities(f"{title} {content}")
+                "sentiment": get_sentiment(combined_text),
+                "keywords": extract_keywords(combined_text, ignored_words),
+                "entities": extract_entities(combined_text)
             }
             
             await save_post_to_db(post_entry, subreddit_name)
@@ -167,9 +170,13 @@ async def process_queue_batch(subreddit_name: str, limit: int = 15, status: str 
     if not tasks:
         return
 
+    # Fetch the exact list of ignored words at the moment this batch begins
+    ignored_words = await get_all_ignored_words()
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=headless)
         
+        # Production Stealth Context Override
         context = await browser.new_context(
             storage_state=AUTH_FILE if os.path.exists(AUTH_FILE) else None,
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -179,6 +186,7 @@ async def process_queue_batch(subreddit_name: str, limit: int = 15, status: str 
         )
         try:
             for t in tasks:
-                await scrape_post_by_id(context, t['post_id'], subreddit_name)
+                # Pass the dynamically fetched ignored words down to the single post scraper
+                await scrape_post_by_id(context, t['post_id'], subreddit_name, ignored_words)
         finally:
             await browser.close()
