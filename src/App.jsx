@@ -5,11 +5,10 @@ import Header from "./components/ui/Header";
 import { Flex } from "@chakra-ui/react";
 import UserInput from "./components/ui/UserInput.jsx";
 import SubredditsSuggestions from "./components/ui/SubredditsSuggestion";
-import ProgressBar from "./components/ui/ProgressBar";
 import DataTabs from "./components/ui/DataTabs";
 import UpcomingFeatures from "./components/Feature Tracker/UpcomingFeatures";
 
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import { serverStatusActions } from "./store/serverStatus";
 import ReanalyzeButton from "./components/ui/ReanalyzeButton";
 
