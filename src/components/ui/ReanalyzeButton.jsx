@@ -15,8 +15,11 @@ export default function ReanalyzeButton() {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    const wsUrl = `ws://${BASE_URL}/ws/reanalyze`;
+    const wsUrl = import.meta.env.PROD
+      ? "wss://api.theonlyalfaz.com/ws/reanalyze"
+      : "ws://192.168.0.246:8000/ws/reanalyze";
 
+    console.log(`Connecting to WebSocket channel via: ${wsUrl}`);
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
