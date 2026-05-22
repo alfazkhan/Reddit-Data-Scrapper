@@ -66,7 +66,6 @@ export default function KeywordsPieChart({ data }) {
     const maxValue = Math.max(...sortedValues.slice(-10));
     setMinValue(minValue);
     setMaxValue(maxValue);
-    console.log(Number.isInteger(minValue), maxValue);
   }
 
   const chartData = useMemo(() => {

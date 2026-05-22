@@ -7,7 +7,7 @@ from database.core import get_db_pool
 from database.posts import save_post_to_db, get_archived_ids, get_oldest_post_id
 from database.queue_manager import get_queued_ids, add_to_queue, update_queue_status, get_queue_tasks_by_status
 from database.ignored_words import get_all_ignored_words
-from nlp_processor import get_sentiment, extract_keywords, extract_entities
+from nlp_processor import get_sentiment, extract_keywords, extract_entities, classify_topics
 
 async def get_post_metadata(post):
     """Safely extracts post ID and timestamp from a feed element."""
@@ -20,11 +20,6 @@ async def get_post_metadata(post):
         return None, ""
 
 async def scrape_post_by_id(context, post_id: str, subreddit_name: str, ignored_words: set):
-    """
-    Performs a deep scrape of a single post URL.
-    Optimized with native shadow-piercing locators and structural fallbacks.
-    Accepts a dynamic set of ignored words to pass down to the NLP processor.
-    """
     async with semaphore:
         page = await context.new_page()
         clean_id = post_id.replace("t3_", "")
@@ -37,7 +32,7 @@ async def scrape_post_by_id(context, post_id: str, subreddit_name: str, ignored_
             try:
                 await page.wait_for_selector('h1', timeout=10000, state="attached")
             except Exception:
-                logging.warning(f"Scraper: Top-tier h1 selector missing for post {clean_id}. Trying fallbacks.")
+                pass
 
             title = ""
             for selector in ['h1', '[post-title]', 'shreddit-title', 'title']:
@@ -49,11 +44,6 @@ async def scrape_post_by_id(context, post_id: str, subreddit_name: str, ignored_
                         break
 
             if not title:
-                logging.error(f"Scraper: Unable to resolve title headers for post {clean_id}. Aborting task.")
-                await update_queue_status(post_id, 'failed')
-                return None
-
-            if "reddit" in title.lower() and len(title) < 15:
                 await update_queue_status(post_id, 'failed')
                 return None
 
@@ -72,12 +62,13 @@ async def scrape_post_by_id(context, post_id: str, subreddit_name: str, ignored_
                 "body": content,
                 "sentiment": get_sentiment(combined_text),
                 "keywords": extract_keywords(combined_text, ignored_words),
-                "entities": extract_entities(combined_text)
+                "entities": extract_entities(combined_text),
+                "topics": classify_topics(combined_text)
             }
             
             await save_post_to_db(post_entry, subreddit_name)
             await update_queue_status(post_id, 'completed')
-            logging.info(f"Scraper: Successfully archived {post_id}.")
+            logging.info(f"Scraper: Successfully archived {post_id} with Zero-Shot categorization.")
             return post_entry
             
         except Exception as e:

@@ -37,17 +37,19 @@ async def save_post_to_db(post_entry: dict, subreddit_name: str):
         ts_obj = safe_parse_timestamp(post_entry.get('timestamp'))
         
         await conn.execute('''
-            INSERT INTO reddit_posts (id, subreddit_id, timestamp, title, body, sentiment, keywords, entities)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+            INSERT INTO reddit_posts (id, subreddit_id, timestamp, title, body, sentiment, keywords, entities, topics)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
             ON CONFLICT (id) DO UPDATE SET
                 title = EXCLUDED.title,
                 body = EXCLUDED.body,
                 sentiment = EXCLUDED.sentiment,
                 keywords = EXCLUDED.keywords,
-                entities = EXCLUDED.entities
+                entities = EXCLUDED.entities,
+                topics = EXCLUDED.topics
         ''', post_entry['id'], sub_id, ts_obj, post_entry['title'], 
            post_entry['body'], post_entry['sentiment'], 
-           json.dumps(post_entry['keywords']), json.dumps(post_entry['entities']))
+           json.dumps(post_entry['keywords']), json.dumps(post_entry['entities']),
+           json.dumps(post_entry['topics']))
 
 async def load_posts_from_db(subreddit_name: str, limit: int):
     pool = await get_db_pool()
@@ -112,14 +114,15 @@ async def get_post_keywords_for_cleaning(subreddit_name: str):
         ''', subreddit_name)
         return [dict(row) for row in rows]
 
-async def update_post_nlp_data(post_id: str, sentiment: str, keywords: list, entities: dict):
+async def update_post_nlp_data(post_id: str, sentiment: str, keywords: list, entities: dict, topics: dict):
+    """Updates the complete suite including our new classification objects."""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         await conn.execute('''
             UPDATE reddit_posts
-            SET sentiment = $1, keywords = $2, entities = $3
-            WHERE id = $4
-        ''', sentiment, json.dumps(keywords), json.dumps(entities), post_id)
+            SET sentiment = $1, keywords = $2, entities = $3, topics = $4
+            WHERE id = $5
+        ''', sentiment, json.dumps(keywords), json.dumps(entities), json.dumps(topics), post_id)
 
 async def update_post_keywords_only(post_id: str, keywords: dict):
     pool = await get_db_pool()

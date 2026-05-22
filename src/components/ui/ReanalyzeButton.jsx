@@ -1,40 +1,51 @@
-import { Button, HStack, VStack } from "@chakra-ui/react";
+import { Button, HStack, VStack, Blockquote } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import ProgressBar from "./ProgressBar.jsx";
+
+const BASE_URL = import.meta.env.PROD
+  ? "api.theonlyalfaz.com"
+  : "192.168.0.246:8000";
 
 export default function ReanalyzeButton() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("Idle");
+  const [loading, setLoading] = useState(false)
 
   const socketRef = useRef(null);
 
   useEffect(() => {
-    const wsUrl = "ws://192.168.0.246:8000/ws/reanalyze";
+    const wsUrl = `ws://${BASE_URL}/ws/reanalyze`;
 
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
     socket.onopen = () => {
-        setStatus("Connected")
+      setStatus("Connected");
       console.log("WebSocket connection established.");
     };
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log("Live Progress Data:", data);
-
       // Dynamically update UI state based on the payload type
       if (data.type === "progress" && data.percent !== undefined) {
         setProgress(data.percent);
-        setStatus(`Reanalyzing r/${data.subreddit}...`);
+        setStatus(data.message);
       } else if (
         data.type === "status" ||
         data.type === "info" ||
-        data.type === "warning"
+        data.type === "warning" ||
+        data.type === "error"
       ) {
         setStatus(data.message);
+        console.log(data.message);
+        setLoading(false)
       } else if (data.type === "complete") {
         setProgress(100);
+        setStatus(data.message);
+        console.log(data.message);
+      } else {
+        console.log(data);
         setStatus(data.message);
       }
     };
@@ -52,10 +63,18 @@ export default function ReanalyzeButton() {
   }, []);
 
   // Helper function to fire actions safely
-  const sendAction = (actionName) => {
+  const sendAction = (actionName,keywordOnly) => {
+    if(actionName === "pause" || actionName === "stop" ){
+      setLoading(true)
+    }
+
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(
-        JSON.stringify({ action: actionName, open_page: false }),
+        JSON.stringify({
+          action: actionName,
+          open_page: false,
+          keywords_only: keywordOnly,
+        }),
       );
     } else {
       console.error("Cannot send command: WebSocket is disconnected.");
@@ -70,18 +89,30 @@ export default function ReanalyzeButton() {
         justifyContent="center"
         alignItems="baseline"
       >
-        <ProgressBar value={progress} processingStatus={status} />
+        <ProgressBar value={progress} processingStatus={"Reanalyze Progress"} />
       </HStack>
       <HStack>
         <Button
           size="xs"
           color="white"
           fontWeight="black"
-          bg="orange.600"
+          bg="green.600"
           marginBottom={2}
-          onClick={() => sendAction("start")}
+          disabled={loading}
+          onClick={() => sendAction("start",true)}
         >
-          Reanalyze
+          Keyword-Only Reanalysis
+        </Button>
+        <Button
+          size="xs"
+          color="white"
+          fontWeight="black"
+          bg="red.700"
+          marginBottom={2}
+          disabled={loading}
+          onClick={() => sendAction("start",false)}
+        >
+          Complete Re-Analysis
         </Button>
         <Button
           size="xs"
@@ -89,6 +120,7 @@ export default function ReanalyzeButton() {
           fontWeight="black"
           bg="orange.600"
           marginBottom={2}
+          disabled={loading}
           onClick={() => sendAction("pause")}
         >
           Pause
@@ -99,6 +131,7 @@ export default function ReanalyzeButton() {
           fontWeight="black"
           bg="orange.600"
           marginBottom={2}
+          disabled={loading}
           onClick={() => sendAction("resume")}
         >
           Resume
@@ -109,10 +142,16 @@ export default function ReanalyzeButton() {
           fontWeight="black"
           bg="orange.600"
           marginBottom={2}
+          disabled={loading}
           onClick={() => sendAction("stop")}
         >
           Stop
         </Button>
+      </HStack>
+      <HStack mt={5}>
+        <Blockquote.Root>
+          <Blockquote.Content fontSize="2xl">{status}</Blockquote.Content>
+        </Blockquote.Root>
       </HStack>
     </VStack>
   );

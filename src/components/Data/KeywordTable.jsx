@@ -27,7 +27,6 @@ export default function KeywordTable({ data }) {
     const maxValue = Math.max(...sortedValues.slice(-10));
     setMinValue(minValue);
     setMaxValue(maxValue);
-    console.log(Number.isInteger(minValue), maxValue);
   }
 
   let chartData = useMemo(() => {

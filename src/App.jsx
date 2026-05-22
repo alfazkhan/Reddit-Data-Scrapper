@@ -58,6 +58,7 @@ function App() {
     } else {
       setProcessingStatus(false);
       setPosts(resData);
+      console.log(resData)
     }
   }
 
