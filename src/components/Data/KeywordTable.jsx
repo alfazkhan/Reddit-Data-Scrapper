@@ -1,4 +1,4 @@
-import { HStack, Table, Field, NumberInput, Flex } from "@chakra-ui/react";
+import { HStack, Table, Field, NumberInput, Flex, Button } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 
 export default function KeywordTable({ data }) {
@@ -19,6 +19,16 @@ export default function KeywordTable({ data }) {
     });
     return counts;
   }, [data]);
+
+  function getTopTen() {
+    const valuesSet = new Set(Object.values(keywordsCount));
+    const sortedValues = Array.from(valuesSet).sort((a, b) => a - b);
+    const minValue = Math.min(...sortedValues.slice(-10));
+    const maxValue = Math.max(...sortedValues.slice(-10));
+    setMinValue(minValue);
+    setMaxValue(maxValue);
+    console.log(Number.isInteger(minValue), maxValue);
+  }
 
   let chartData = useMemo(() => {
     const entries = Object.entries(keywordsCount).reduce(
@@ -46,7 +56,7 @@ export default function KeywordTable({ data }) {
             Min Frequency <Field.RequiredIndicator />
           </Field.Label>
           <NumberInput.Root
-            defaultValue={minValue}
+            value={minValue}
             width="50%"
             allowMouseWheel
             onValueChange={(details) => setMinValue(details.valueAsNumber)}
@@ -63,7 +73,7 @@ export default function KeywordTable({ data }) {
             Max Frequency <Field.RequiredIndicator />
           </Field.Label>
           <NumberInput.Root
-            defaultValue={maxValue}
+            value={maxValue}
             width="50%"
             allowMouseWheel
             onValueChange={(details) => setMaxValue(details.valueAsNumber)}
@@ -76,6 +86,20 @@ export default function KeywordTable({ data }) {
           </Field.HelperText> */}
         </Field.Root>
       </HStack>
+      <HStack>
+              <Button
+                key="top10"
+                size="xs"
+                color="white"
+                fontWeight="black"
+                bg="orange.600"
+                onClick={getTopTen}
+                marginBottom={2}
+                minW={"100px"}
+              >
+                Get top 10
+              </Button>
+            </HStack>
 
       <Table.ScrollArea
         h="500px"
@@ -110,6 +134,7 @@ export default function KeywordTable({ data }) {
           </Table.Body>
         </Table.Root>
       </Table.ScrollArea>
+
     </Flex>
   );
 }
