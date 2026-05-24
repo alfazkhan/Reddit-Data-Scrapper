@@ -90,18 +90,25 @@ function App() {
         </Flex>
       )}
 
-      <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
-        <Collapsible.Root>
-          <Collapsible.Trigger paddingY="3" backgroundColor="red.500" fontWeight="bolder" px={10}>
-            DO NOT TOUCH!
-          </Collapsible.Trigger>
-          <Collapsible.Content>
-            <Box padding="4" borderWidth="1px">
-              <ReanalyzeButton />
-            </Box>
-          </Collapsible.Content>
-        </Collapsible.Root>
-      </Flex>
+      {import.meta.env.PROD && (
+        <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
+          <Collapsible.Root>
+            <Collapsible.Trigger
+              paddingY="3"
+              backgroundColor="red.500"
+              fontWeight="bolder"
+              px={10}
+            >
+              DO NOT TOUCH!
+            </Collapsible.Trigger>
+            <Collapsible.Content>
+              <Box padding="4" borderWidth="1px">
+                <ReanalyzeButton />
+              </Box>
+            </Collapsible.Content>
+          </Collapsible.Root>
+        </Flex>
+      )}
     </Flex>
   );
 }

@@ -1,101 +1,230 @@
-# Subreddit Analyzer:  Data Sciencewith React Powered Dashboard
+# Reddit Data Scrapper
 
-A full-stack Business Intelligence (BI) tool designed to scrape, analyze, and visualize Reddit data in real-time. This project uses a Python-based backend for advanced Natural Language Processing (NLP) and a React-powered frontend for a seamless data visualization experience.
+A full-stack Reddit analysis platform that combines a React dashboard with a Python FastAPI backend, NLP pipelines, and PostgreSQL-backed storage.
 
-## Overview
+## Live Demo
 
-Subreddit Scrapper allows users to enter any subreddit name and fetch a specified number of posts. The system performs real-time sentiment analysis, keyword extraction, and Named Entity Recognition (NER) to provide actionable insights through an interactive dashboard.
+Access the live deployment at:
 
-### Key Features
-* **Live Scrapping:** Uses Playwright to navigate Reddit and stream new posts directly to the UI.
-* **Hybrid Caching:** Implements a gap-filling caching mechanism that stores historical data locally in JSON format to speed up repeated queries.
-* **Sentiment Analysis:** Utilizes the `cardiffnlp/twitter-roberta-base-sentiment-latest` Transformer model for high-accuracy context-aware sentiment classification.
-* **Named Entity Recognition (NER):** Leverages Spacy (`en_core_web_sm`) to identify entities such as Organizations, Money, Dates, and People.
-* **Real-Time Updates:** Communication between the frontend and backend is handled via WebSockets for live progress tracking and data deltas.
-* **Visual Analytics:** Interactive pie charts, sentiment cards, and keyword frequency tables.
+- https://subanalyzer.theonlyalfaz.com/
 
-## Dashboard Preview
 
-To help visualize the data, the dashboard provides several analytical views:
+## What the Project Does
 
-### Sentiment Analysis
-The sentiment overview gives a high-level breakdown of the emotional tone of the scraped posts.
-![Sentiment Dashboard](./src/assets/Screenshots/Sentiments.png)
+This project is built to discover and analyze Reddit data with a full-stack platform that combines scraping, database storage, NLP, and dashboard visualization.
 
-### Keyword Visualization
-Interactive charts show the most frequent terms, allowing for quick identification of trending topics.
-![Keyword Pie Chart](./src/assets/Screenshots/Pie-Chart.png)
+- #### Subreddit selection and post count input with Cache summary display of tracked subreddit statistics
+   ![Subreddit Input](./src/assets/Screenshots/UserInput.png)
 
-### Data Tables
-Detailed views for specific posts and entity extraction results.
-![Posts Table with NER](./src/assets/Screenshots/Post-Table.png)
-![Keyword Frequency Table](./src/assets/Screenshots/Keyword-Table.png)
+- Sentiment analysis views
+   ![Sentiment Analysis](./src/assets/Screenshots/Sentiments.png)
 
----
+- Keyword frequency and pie chart visualization
+  ![Keyword Chart](./src/assets/Screenshots/Keyword-Table.png)
 
-## Tech Stack
+- Posts table with sortable/filterable results
+   ![Posts Table](./src/assets/Screenshots/Post-Table.png)
 
-### Backend (Python)
-* **Playwright:** Headless/Headful browser automation for web scraping.
-* **WebSockets:** Real-time bi-directional communication.
-* **Transformers (Hugging Face):** RoBERTa model for sentiment analysis.
-* **Spacy:** Named Entity Recognition (NER).
-* **NLTK:** Tokenization, stopword removal, and lemmatization.
-* **Asyncio:** Concurrent processing of multiple browser tabs.
+- Post frequency analytics
+  ![Post Frequency](./src/assets/Screenshots/Post-Frequency.png)
 
-### Frontend (React)
-* **Tailwind CSS:** Modern, responsive UI design.
-* **Lucide React:** Icon set for the dashboard.
-* **chartjs:** Visualization for sentiment and keyword data.
-* **State Management:** Hooks for handling live WebSocket data streams.
+<!-- - Dynamic reanalysis UI panel
+  - ![Reanalysis Panel](https://picsum.photos/seed/reanalysis-panel/800/450) -->
 
----
+## Project Overview
 
-##  Backend Logic & Workflow
+This repository contains:
 
-1.  **Command Reception:** The backend waits for a WebSocket command containing the subreddit name and post count.
-2.  **Phase 1 (Priority Stream):** The scraper identifies new posts not present in the cache and prioritizes them for immediate analysis and UI update.
-3.  **Phase 2 (NLP Pipeline):**
-    * **Tokenization & Cleaning:** Removes stopwords and "Reddit-specific" noise like "deleted" or "amp".
-    * **Sentiment:** Classified via RoBERTa Transformer.
-    * **NER:** Filters for BI-relevant labels like `ORG`, `GPE`, `MONEY`, and `PRODUCT`.
-4.  **Phase 3 (Background Maintenance):** While the user views the data, the scraper continues to fill "gaps" between the latest post and the last cached post silently in the background.
-5.  **Phase 4 (Persistence):** Data is saved to local JSON files per subreddit to allow for "Cache Only" mode, bypassing the browser entirely for instant loading.
+- `src/`: React frontend application built with Vite and Chakra UI.
+- `Scrapping/`: Python backend, data scraper, NLP processors, database modules, and FastAPI routing.
+- `Scrapping/requirements.txt`: Python dependencies.
+- `package.json`: frontend dependencies.
 
----
+The application allows a user to select a subreddit, request a number of posts, and view analysis across sentiment, keywords, entities, and post frequency.
 
-## Installation & Setup
+## Architecture
 
-### Prerequisites
-* Python 3.8+
-* Node.js & npm
-* Brave Browser (or Chromium)
+### Frontend
 
-### Backend Setup
-1.  Navigate to the project directory.
-2.  Install dependencies:
-    ```bash
-    pip install nltk websockets playwright transformers torch spacy
-    python -m spacy download en_core_web_sm
-    ```
-3.  Update the `BRAVE_PATH` in the script to point to your browser executable.
-4.  Run the server:
-    ```bash
-    python Scrapping.py
-    ```
+- React 19
+- Vite
+- Chakra UI
+- Redux Toolkit
+- Chart.js / react-chartjs-2
+- Firebase
+- Recharts
+- PapaParse
 
-### Frontend Setup
-1.  Navigate to the frontend folder.
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Start the development server:
-    ```bash
-    npm start
-    ```
+### Backend
 
----
+- Python 3
+- FastAPI
+- Uvicorn
+- Playwright
+- Transformers
+- PyTorch
+- spaCy
+- NLTK
+- PostgreSQL via `asyncpg`
 
-## 📝 License
-This project was developed for educational and research purposes in Business Intelligence and Data Science.
+### Database
+
+<!-- - PostgreSQL connection configuration is in `Scrapping/config.py` -->
+- Tables and storage are managed by `Scrapping/database/`
+- Post, subreddit, ignored words, and queue state are handled by async DB helpers
+
+## Backend API Endpoints
+
+### Subreddits
+
+- `POST /subreddits` #PendingFeature
+  - body: `{ name, description?, total_users?, is_active?, keep_updated? }`
+  - Creates a new tracked subreddit configuration.
+- `GET /subreddits`
+  - Returns tracked subreddit entries.
+- `GET /subreddits/{name}`
+  - Returns details for one tracked subreddit.
+- `PUT /subreddits/{name}`
+  - Updates a subreddit tracking configuration.
+- `DELETE /subreddits/{name}`
+  - Removes a subreddit from active tracking.
+
+### Posts
+
+- `GET /summary`
+  - Returns cached summary data for all tracked subreddits.
+- `GET /posts/{subreddit}?limit={n}`
+  - Returns up to `n` posts for the requested subreddit.
+- `GET /posts/{subreddit}/all`
+  - Returns all cached posts for the requested subreddit.
+
+### Real-time Reanalysis 
+
+- `WS /ws/reanalyze` #Hidden
+  - WebSocket endpoint that receives actions such as:
+    - `start`
+    - `pause`
+    - `resume`
+    - `stop`
+  - Allows live progress updates for NLP reanalysis work.
+
+## Important Backend Behavior
+
+- `Scrapping/main_v2.py` starts the FastAPI app and a long-running background worker.
+- The background worker:
+  - loads active subreddits
+  - performs queue maintenance
+  - boots up missing subreddit caches
+  - performs routine updates if data gaps exist
+- `Scrapping/routes_reanalyze.py` supports live reanalysis over WebSocket.
+- `Scrapping/Routes/routes_posts.py` and `Scrapping/Routes/routes_subreddits.py` expose REST endpoints.
+
+## Installation
+
+### 1. Backend
+
+```bash
+cd "d:\React JS\Reddit-Data-Scrapper\Scrapping"
+python -m venv .venv
+# Activate the venv on PowerShell
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+python -m playwright install
+```
+
+> If your system uses a different browser executable, update the scraping setup accordingly.
+
+### 2. Frontend
+
+```bash
+cd "d:\React JS\Reddit-Data-Scrapper"
+npm install
+```
+
+## Running Locally
+
+### Start the backend
+
+```bash
+cd "d:\React JS\Reddit-Data-Scrapper\Scrapping"
+python main_v2.py
+```
+
+The backend listens on `http://192.168.0.246:8000` in development mode.
+
+### Start the frontend
+
+```bash
+cd "d:\React JS\Reddit-Data-Scrapper"
+npm run dev
+```
+
+### Notes
+
+- The frontend uses `BASE_URL` values in `src/App.jsx` and `src/components/ui/ReanalyzeButton.jsx`.
+- Adjust the hard-coded host if your backend runs on a different address.
+- `Scrapping/config.py` controls database settings, `MAX_CONCURRENT_TABS`, and scrape interval.
+
+## Frontend Usage
+
+1. Open the React app in the browser.
+2. Select a subreddit from the cached summary dropdown.
+3. Enter the number of posts to fetch.
+4. Click **Fetch Posts**.
+5. Explore sentiment, keyword, table, and frequency tabs.
+6. Use the reanalysis UI to trigger dynamic NLP pipelines if available.
+
+## Project Structure
+
+- `src/` — React app source
+- `src/components/ui/` — dashboard UI components
+- `src/components/Data/` — chart and table components
+- `Scrapping/` — backend app, scraper logic, NLP, database helpers
+- `Scrapping/Routes/` — FastAPI route modules
+- `Scrapping/database/` — PostgreSQL access and persistence logic
+
+## Screenshots / Media
+
+<!-- Add screenshots here if available: UI dashboard, charts, tables, analytics panels -->
+
+## Dependencies
+
+### Python (backend)
+- `asyncpg`
+- `playwright`
+- `transformers`
+- `torch`
+- `uvicorn`
+- `fastapi`
+- `nltk`
+- `spacy`
+- `collections-extended`
+- `pytest`
+- `pytest-asyncio`
+
+### JavaScript (frontend)
+- `react`
+- `react-dom`
+- `@chakra-ui/react`
+- `@chakra-ui/charts`
+- `@reduxjs/toolkit`
+- `@tanstack/react-table`
+- `chart.js`
+- `chartjs-plugin-datalabels`
+- `firebase`
+- `next-themes`
+- `papaparse`
+- `react-chartjs-2`
+- `react-icons`
+- `react-redux`
+- `recharts`
+
+## Notes
+
+- `Scrapping/auth.json` may contain browser auth/session data and should be managed carefully.
+- The repository uses `FastAPI` for the backend API and WebSocket management.
+- The frontend includes a hidden reanalysis section powered by WebSocket controls.
+
+## License
+This repository is intended for learning, experimentation, and personal analytics. Modify as needed for your own deployment or research use case.
