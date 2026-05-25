@@ -1,6 +1,6 @@
-import { Button, HStack, VStack, Text } from "@chakra-ui/react";
-import {useDispatch} from "react-redux";
-import {userInputAction} from "../../store/userInput.js"
+import { Button, HStack, VStack, Text, Flex } from "@chakra-ui/react";
+import { useDispatch } from "react-redux";
+import { userInputAction } from "../../store/userInput.js";
 
 // const Suggestions = [
 //   { name: "r/India", link: "India" },
@@ -29,54 +29,56 @@ function dateTimeFormatter(rawTimestamp) {
 }
 
 export default function SubredditsSuggestions({ cacheSummary }) {
-
-  const dispatch = useDispatch()
-  
+  const dispatch = useDispatch();
 
   return (
-    <HStack>
-      {Object.keys(cacheSummary).map((sub) => (
-        <VStack key={sub + "stack"} gap="-1.5">
-          <Button
-            key={sub}
-            size="xs"
-            color="white"
-            fontWeight="black"
-            bg="orange.600"
-            onClick={() => {
-              dispatch(userInputAction.handleNameChange(`${sub}`));
-              dispatch(userInputAction.handleCountChange(cacheSummary[sub]?.count))
-            }}
-            marginBottom={2}
-            minW={"100px"}
-          >
-            {sub}
-          </Button>
-          <Text
-            key={`${sub}-count`}
-            color="green.400"
-            fontSize="xx-small"
-            textAlign="left"
-          >
-            Cached Posts: {cacheSummary[sub]?.count}
-          </Text>
-          <Text
-            key={`${sub}-last-updated`}
-            fontSize="xx-small"
-            textAlign="left"
-          >
-            Last Scrapped post:
-          </Text>
-          <Text
-            key={`${sub}-datetime`}
-            color="green.400"
-            fontSize="xx-small"
-            textAlign="left"
-          >
-            {dateTimeFormatter(cacheSummary[sub]?.last_updated)}
-          </Text>
-        </VStack>
-      ))}
-    </HStack>
+    <Flex gap="4" wrap="wrap">
+      {/* <HStack overflowX="scroll"> */}
+        {Object.keys(cacheSummary).map((sub) => (
+          <VStack key={sub + "stack"} gap="-1.5">
+            <Button
+              key={sub}
+              size="xs"
+              color="white"
+              fontWeight="black"
+              bg="orange.600"
+              onClick={() => {
+                dispatch(userInputAction.handleNameChange(`${sub}`));
+                dispatch(
+                  userInputAction.handleCountChange(cacheSummary[sub]?.count),
+                );
+              }}
+              marginBottom={2}
+              minW={"100px"}
+            >
+              {sub}
+            </Button>
+            <Text
+              key={`${sub}-count`}
+              color="green.400"
+              fontSize="xx-small"
+              textAlign="left"
+            >
+              Cached Posts: {cacheSummary[sub]?.count}
+            </Text>
+            <Text
+              key={`${sub}-last-updated`}
+              fontSize="xx-small"
+              textAlign="left"
+            >
+              Last Scrapped post:
+            </Text>
+            <Text
+              key={`${sub}-datetime`}
+              color="green.400"
+              fontSize="xx-small"
+              textAlign="left"
+            >
+              {dateTimeFormatter(cacheSummary[sub]?.last_updated)}
+            </Text>
+          </VStack>
+        ))}
+      {/* </HStack> */}
+    </Flex>
   );
 }

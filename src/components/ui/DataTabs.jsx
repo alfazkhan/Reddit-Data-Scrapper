@@ -6,6 +6,7 @@ import KeywordsPieChart from "../Data/KeywordsPieChart";
 import PostsTable from "../Data/PostsTable";
 import PostsFrequency from "../Data/PostsFrequency";
 import { useEffect } from "react";
+import EmotionsThroughoutDay from "../Data/EmotionsThroughoutDay";
 
 export default function DataTabs({ postsData, processingStatus }) {
   useEffect(() => {
@@ -50,15 +51,20 @@ export default function DataTabs({ postsData, processingStatus }) {
       icon: LuUser,
       content: <PostsFrequency data={postsData} />,
     },
+    // {
+    //   value: "Emotions Throughout Day",
+    //   icon: LuUser,
+    //   content: <EmotionsThroughoutDay data={postsData} />,
+    // },
   ];
 
   return (
     <Box position="relative" aria-busy="true" userSelect="none">
       <Tabs.Root
-        defaultValue="Posts Table"
+        defaultValue="Sentiments"
         variant="plain"
         lazyMount
-        // unmountOnExit
+        unmountOnExit
         width="auto"
         fitted
         css={{

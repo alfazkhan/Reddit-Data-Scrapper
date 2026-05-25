@@ -21,11 +21,12 @@ async def get_post_metadata(post):
 
 async def scrape_post_by_id(context, post_id: str, subreddit_name: str, ignored_words: set):
     async with semaphore:
-        page = await context.new_page()
         clean_id = post_id.replace("t3_", "")
         url = f"https://www.reddit.com/r/{subreddit_name}/comments/{clean_id}"
+        page = None
         
         try:
+            page = await context.new_page()
             logging.info(f"Scraper: Opening post {clean_id}...")
             await page.goto(url, wait_until="load", timeout=45000)
             
@@ -76,7 +77,7 @@ async def scrape_post_by_id(context, post_id: str, subreddit_name: str, ignored_
             await update_queue_status(post_id, 'failed')
             return None
         finally:
-            if not page.is_closed():
+            if page and not page.is_closed():
                 await page.close()
 
 async def run_discovery_scan(subreddit_name: str, mode: str = 'routine', headless: bool = False):

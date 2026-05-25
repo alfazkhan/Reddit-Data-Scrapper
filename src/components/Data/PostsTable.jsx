@@ -23,8 +23,22 @@ const config = [
   { emoji: "😠", color: "#aa0505", label: "Negative" },
 ];
 
+const topicsConfig = [
+  "Housing, Accommodations & Living Logistics",
+  "Public Transit, Traffic & Urban Mobility",
+  "Local Administration, Law & Politics",
+  "Jobs, Career & Local Economy",
+  "Education, Students & Schools",
+  "Food, Dining & Local Cuisines",
+  "Nightlife, Festivals & Social Events",
+  "Tourism, Sightseeing & Local Travel",
+  "Sports, Hobbies & Recreation",
+  "Public Safety, Weather & Emergency Alerts",
+];
+
 export default function KeywordTable({ data: postsData }) {
   const [sentiment, setSentiment] = useState("All");
+  const [topics, setTopics] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
@@ -34,6 +48,12 @@ export default function KeywordTable({ data: postsData }) {
     data = postsData.filter((post) => post.sentiment === sentiment);
   }
 
+  if (topics !== "All") {
+    data = postsData.filter((post) => {
+      return JSON.parse(post.topics).primary_topic === topics;
+    });
+  }
+
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
@@ -41,12 +61,27 @@ export default function KeywordTable({ data: postsData }) {
   }, [data, currentPage]);
 
   function parseTopics(topicData) {
-    console.log(JSON.parse(topicData));
+    const parsedData = JSON.parse(topicData);
+    // console.log(parsedData.primary_topic);
     return (
       <>
-        <Badge colorPalette="green" variant="solid">
-          {JSON.parse(topicData)?.primary_topic}
-        </Badge>
+        {parsedData?.labels.map((label, idx) => {
+          return (
+            <Badge
+              key={idx}
+              colorPalette={
+                label === parsedData.primary_topic ? "green" : "gray"
+              }
+              variant={label === parsedData.primary_topic && "solid"}
+              size={label === parsedData.primary_topic ? "lg" : "xs"}
+            >
+              <Text key={idx}>{label}</Text>
+              <Badge key={idx + "score"} size="xs" colorPalette="yellow">
+                {(parsedData.scores[idx] * 100).toFixed(2)}%
+              </Badge>
+            </Badge>
+          );
+        })}
       </>
     );
   }
@@ -84,6 +119,39 @@ export default function KeywordTable({ data: postsData }) {
             <Text>{emotion.emoji}</Text>
             <Text fontWeight="bold" color="white">
               {emotion.label}
+            </Text>
+          </Flex>
+        ))}
+      </HStack>
+      <HStack
+        width="full"
+        justifyContent="space-around"
+        gap="4"
+        mb={4}
+        borderWidth="0.1px"
+        padding={3}
+        borderColor="gray.700"
+        overflowX="scroll"
+      >
+        <Text fontSize="lg" fontWeight="bold">
+          Filter Posts By
+        </Text>
+        {topicsConfig.map((topic) => (
+          <Flex
+            key={topic}
+            alignItems="center"
+            borderRadius="xs"
+            padding={2}
+            cursor="pointer"
+            backgroundColor={topic === topics ? "orange.600" : "gray.800"}
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={() => {
+              setTopics(topic);
+              setCurrentPage(1);
+            }}
+          >
+            <Text fontSize="xx-small" fontWeight="bold" color="white">
+              {topic}
             </Text>
           </Flex>
         ))}
@@ -201,25 +269,6 @@ export default function KeywordTable({ data: postsData }) {
                 </Table.Cell>
                 <Table.Cell>
                   <Stack direction="column">
-                    {/* {JSON.parse(post.entities)
-                      .filter(
-                        (item, index, self) =>
-                          index ===
-                          self.findIndex((t) => t.label === item.label),
-                      )
-                      .map((e,idx) => {
-                        if (labelConfig[e.label] !== undefined) {
-                          return (
-                            <Badge
-                              id={labelConfig[e.label]?.type}
-                              colorPalette={labelConfig[e.label]?.color}
-                              key={idx}
-                            >
-                              {labelConfig[e.label]?.type}
-                            </Badge>
-                          );
-                        }
-                      })} */}
                     {post.topics && parseTopics(post.topics)}
                     {!post.topics && "No Data Right now..."}
                   </Stack>

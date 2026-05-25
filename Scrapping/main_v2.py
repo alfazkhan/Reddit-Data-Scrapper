@@ -48,6 +48,15 @@ logging.basicConfig(
 is_scraping = asyncio.Lock()
 
 async def background_worker():
+    # Auto-clear zombie tasks that were stuck in "processing" state from a previous restart
+    try:
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            await conn.execute("UPDATE scraping_queue SET status = 'pending' WHERE status = 'processing'")
+            logging.info("Worker: Successfully reset zombie 'processing' tasks back to 'pending'.")
+    except Exception as e:
+        logging.error(f"Worker: Could not reset zombie tasks: {e}")
+
     while True:
         logging.info("Worker: Starting background maintenance cycle.")
         
@@ -72,14 +81,17 @@ async def background_worker():
                     last_ts = await get_last_post_timestamp(sub)
                     gap = (datetime.now() - last_ts).total_seconds() if last_ts else 3601
                     
-                    if not is_booted and IS_PRODUCTION:
-                        logging.info(f"Worker: Subreddit r/{sub} not found in cache. Starting initial bootstrap discovery.")
-                        await run_discovery_scan(sub, mode='bootstrap', headless=headlessMode)
-                    elif gap > 3600 and IS_PRODUCTION:
-                        logging.info(f"Worker: Data gap of {int(gap/60)} minutes detected for r/{sub}. Triggering routine update.")
-                        await run_discovery_scan(sub, mode='routine', headless=headlessMode)
+                    if IS_PRODUCTION:
+                        if not is_booted:
+                            logging.info(f"Worker: Subreddit r/{sub} not found in cache. Starting initial bootstrap discovery.")
+                            await run_discovery_scan(sub, mode='bootstrap', headless=headlessMode)
+                        elif gap > 3600:
+                            logging.info(f"Worker: Data gap of {int(gap/60)} minutes detected for r/{sub}. Triggering routine update.")
+                            await run_discovery_scan(sub, mode='routine', headless=headlessMode)
+                        else:
+                            logging.info(f"Worker: Subreddit r/{sub} data is fresh ({int(gap/60)}m gap). Skipping discovery phase.")
                     else:
-                        logging.info(f"Worker: Subreddit r/{sub} data is fresh ({int(gap/60)}m gap). Skipping discovery phase.")
+                        logging.info(f"Worker: Local development mode active. Skipping discovery scan for r/{sub}.")
                     
                     logging.info(f"Worker: Ingesting active pending queue tasks for r/{sub}")
                     await process_queue_batch(sub, limit=15, status='pending', headless=headlessMode)

@@ -62,7 +62,7 @@ export default function UserInput({ onFetchData, cacheSummary, processingStatus 
           <Select.Root
             collection={selectCollection}
             onValueChange={(e) => setSubredditName(e.value[0] || "")}
-            value={[Object.keys(cacheSummary)[0]]}
+            value={[subredditName] }
           >
             <Select.HiddenSelect required />
             <Field.Label >
@@ -79,9 +79,9 @@ export default function UserInput({ onFetchData, cacheSummary, processingStatus 
             <Portal>
               <Select.Positioner>
                 <Select.Content color="gray.900">
-                  {Object.keys(cacheSummary).map((framework, idx) => (
-                    <Select.Item item={framework} key={idx}>
-                      {framework}
+                  {Object.keys(cacheSummary).map((subreddit, idx) => (
+                    <Select.Item item={subreddit} key={idx} onClick={()=>setSubredditName(subreddit)}>
+                      {subreddit}
                       <Select.ItemIndicator />
                     </Select.Item>
                   ))}
