@@ -72,10 +72,10 @@ async def background_worker():
                     last_ts = await get_last_post_timestamp(sub)
                     gap = (datetime.now() - last_ts).total_seconds() if last_ts else 3601
                     
-                    if not is_booted:
+                    if not is_booted and IS_PRODUCTION:
                         logging.info(f"Worker: Subreddit r/{sub} not found in cache. Starting initial bootstrap discovery.")
                         await run_discovery_scan(sub, mode='bootstrap', headless=headlessMode)
-                    elif gap > 3600:
+                    elif gap > 3600 and IS_PRODUCTION:
                         logging.info(f"Worker: Data gap of {int(gap/60)} minutes detected for r/{sub}. Triggering routine update.")
                         await run_discovery_scan(sub, mode='routine', headless=headlessMode)
                     else:
