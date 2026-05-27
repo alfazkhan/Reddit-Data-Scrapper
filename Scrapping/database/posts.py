@@ -85,13 +85,13 @@ async def get_cache_summary():
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('''
-            SELECT s.name, COUNT(p.id) as count, MAX(p.timestamp) as last_updated 
+            SELECT s.id, s.name, COUNT(p.id) as count, MAX(p.timestamp) as last_updated 
             FROM subreddits s 
             LEFT JOIN reddit_posts p ON s.id = p.subreddit_id 
             WHERE s.is_active = TRUE
-            GROUP BY s.name
+            GROUP BY s.id, s.name
         ''')
-        return {r['name']: {"count": r['count'], "last_updated": r['last_updated'].isoformat() if r['last_updated'] else None} for r in rows}
+        return {r['name']: {"id": r['id'], "count": r['count'], "last_updated": r['last_updated'].isoformat() if r['last_updated'] else None} for r in rows}
 
 async def get_post_content_for_reanalysis(subreddit_name: str):
     pool = await get_db_pool()
@@ -133,7 +133,7 @@ async def update_post_keywords_only(post_id: str, keywords: dict):
             WHERE id = $2
         ''', json.dumps(keywords), post_id)
         
-async def get_all_posts_for_dynamic_reanalysis(subreddit: str, target_pipelines: list, only_null: bool):
+async def get_all_posts_for_dynamic_reanalysis(subreddit: str, target_pipelines: list, only_null: bool, start_date: str = None, end_date: str = None):
     """
     Dynamically loads text records from PostgreSQL based on the requested features 
     and whether we should only target entries with missing values.
@@ -142,6 +142,15 @@ async def get_all_posts_for_dynamic_reanalysis(subreddit: str, target_pipelines:
     
     # Base extraction query mapping
     query = "SELECT id, title, body, sentiment, keywords, entities, topics FROM public.reddit_posts WHERE subreddit_id = (SELECT id FROM public.subreddits WHERE name = $1)"
+    args = [subreddit]
+    
+    if start_date:
+        args.append(start_date)
+        query += f" AND timestamp >= ${len(args)}::timestamp"
+        
+    if end_date:
+        args.append(end_date)
+        query += f" AND timestamp <= ${len(args)}::timestamp"
     
     # Conditional logic array appending
     if only_null and target_pipelines:
@@ -163,5 +172,5 @@ async def get_all_posts_for_dynamic_reanalysis(subreddit: str, target_pipelines:
     query += " ORDER BY timestamp DESC;"
     
     async with pool.acquire() as conn:
-        rows = await conn.fetch(query, subreddit)
+        rows = await conn.fetch(query, *args)
         return [dict(row) for row in rows]

@@ -15,11 +15,14 @@ const BASE_URL = import.meta.env.PROD
 
 const analysisTypesValues = ["Keywords", "Sentiment", "Entities", "Topic"];
 
-export default function ReanalyzeButton() {
+export default function ReanalyzeButton({cacheSummary}) {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("Connecting...");
   const [loading, setLoading] = useState(false);
   const [currentStatus, setCurrentStatus] = useState("");
+
+  //Data to be sent
+  const [subredditIDS, setSubredditIDS] = useState([])
   const [analysisTypes, setAnalysisTypes] = useState([]);
   const [onlyNull, setOnlyNull] = useState(false);
 
@@ -143,6 +146,20 @@ export default function ReanalyzeButton() {
     }
   }
 
+  function handleSubredditIDS(id,checked) {
+    const currentIDS = [...subredditIDS];
+    console.log(id)
+    const index = currentIDS.findIndex((e) => e === id);
+    if (index === -1 && checked) {
+      currentIDS.push(id);
+      setSubredditIDS(currentIDS);
+    } else {
+      currentIDS.splice(index, 1);
+      setSubredditIDS(currentIDS);
+    }
+  }
+
+
   const formatTime = (seconds) => {
     if (seconds < 1) return "Calculating...";
     const h = Math.floor(seconds / 3600);
@@ -167,16 +184,19 @@ export default function ReanalyzeButton() {
       setTimeRemaining("");
     }
 
-    console.log(
-      JSON.stringify({
-        action: actionName,
-        pipelines: analysisTypes,
-        only_null: onlyNull,
-      }),
-    );
-
+    
     const confirmStart = confirm(`Do you want to start analysis on ${analysisTypes} with Only Null as ${onlyNull}`)
-    console.log(confirmStart)
+    if(!confirmStart){
+      console.log(
+        JSON.stringify({
+          action: actionName,
+          pipelines: analysisTypes,
+          only_null: onlyNull,
+          subreddits: subredditIDS,
+        }),
+      );
+      return 
+    }
 
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN && confirmStart) {
       socketRef.current.send(
@@ -184,6 +204,7 @@ export default function ReanalyzeButton() {
           action: actionName,
           pipelines: analysisTypes,
           only_null: onlyNull,
+          subreddits: subredditIDS,
         }),
       );
     } else {
@@ -227,7 +248,7 @@ export default function ReanalyzeButton() {
         </HStack>
       )}
 
-      <HStack>
+      <HStack gap={4} borderWidth={0.5} p={5} borderColor="orange.400">
         {analysisTypesValues.map((type) => (
           <Checkbox.Root
             checked={analysisTypes.findIndex((e) => e === type.toLowerCase()) !== -1}
@@ -237,6 +258,20 @@ export default function ReanalyzeButton() {
             <Checkbox.HiddenInput />
             <Checkbox.Control />
             <Checkbox.Label>{type}</Checkbox.Label>
+          </Checkbox.Root>
+        ))}
+      </HStack>
+
+      <HStack gap={4} borderWidth={0.5} p={5} borderColor="orange.400">
+        {Object.keys(cacheSummary).map((sub) => (
+          <Checkbox.Root
+            checked={subredditIDS.findIndex((e) => e === cacheSummary[sub].id) !== -1}
+            onCheckedChange={(e) => handleSubredditIDS(cacheSummary[sub].id,e.checked)}
+            key={cacheSummary[sub].id}
+          >
+            <Checkbox.HiddenInput />
+            <Checkbox.Control />
+            <Checkbox.Label>{sub}</Checkbox.Label>
           </Checkbox.Root>
         ))}
       </HStack>

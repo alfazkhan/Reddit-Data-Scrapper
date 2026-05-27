@@ -85,7 +85,7 @@ class GlobalPipelineManager:
 global_manager = GlobalPipelineManager()
 
 
-async def run_dynamic_text_reanalysis(subreddit: str, target_pipelines: list, only_null: bool, ignored_words: set):
+async def run_dynamic_text_reanalysis(subreddit: str, target_pipelines: list, only_null: bool, ignored_words: set, start_date: str = None, end_date: str = None):
     """
     Dynamic Processing Core: Reads dynamic pipelines to conditionally execute 
     and write text transformations down specified tracks.
@@ -98,7 +98,7 @@ async def run_dynamic_text_reanalysis(subreddit: str, target_pipelines: list, on
     await global_manager.broadcast_payload("status", msg_init)
 
     # Queries records directly matching structural array conditions
-    posts = await get_all_posts_for_dynamic_reanalysis(subreddit, target_pipelines, only_null)
+    posts = await get_all_posts_for_dynamic_reanalysis(subreddit, target_pipelines, only_null, start_date, end_date)
     total_posts = len(posts)
     
     if not total_posts:
@@ -159,12 +159,19 @@ async def run_dynamic_text_reanalysis(subreddit: str, target_pipelines: list, on
         await asyncio.sleep(0.1)
 
 
-async def dynamic_pipeline_orchestrator(target_pipelines: list, only_null: bool):
+async def dynamic_pipeline_orchestrator(target_pipelines: list, only_null: bool, target_subreddits: list = None, start_date: str = None, end_date: str = None):
     """Decoupled runner navigating across tracking targets."""
     try:
         global_manager.current_status = "running"
         all_subs = await db_get_all_subreddits()
-        subreddits = [sub['name'] for sub in all_subs if sub.get('is_active') is True]
+        
+        if target_subreddits:
+            subreddits = [
+                sub['name'] for sub in all_subs 
+                if sub.get('is_active') is True and (sub['name'] in target_subreddits or sub.get('id') in target_subreddits)
+            ]
+        else:
+            subreddits = [sub['name'] for sub in all_subs if sub.get('is_active') is True]
         
         if not subreddits:
             global_manager.current_status = "stopped"
@@ -178,7 +185,7 @@ async def dynamic_pipeline_orchestrator(target_pipelines: list, only_null: bool)
         for sub in subreddits:
             if global_manager.stop_event.is_set():
                 break
-            await run_dynamic_text_reanalysis(sub, target_pipelines, only_null, ignored_words)
+            await run_dynamic_text_reanalysis(sub, target_pipelines, only_null, ignored_words, start_date, end_date)
 
         if not global_manager.stop_event.is_set():
             global_manager.current_status = "stopped"
@@ -214,13 +221,16 @@ async def reanalyze_endpoint(websocket: WebSocket):
                     
                 target_pipelines = data.get("pipelines", ["keywords", "sentiment", "entities", "topic"])
                 only_null = data.get("only_null", False)
+                target_subreddits = data.get("subreddits", None)
+                start_date = data.get("start_date")
+                end_date = data.get("end_date")
                 
                 global_manager.stop_event.clear()
                 global_manager.pause_event.set()
                 global_manager.current_status = "running"
                 
                 global_manager.active_task = asyncio.create_task(
-                    dynamic_pipeline_orchestrator(target_pipelines, only_null)
+                    dynamic_pipeline_orchestrator(target_pipelines, only_null, target_subreddits, start_date, end_date)
                 )
                 await global_manager.broadcast_payload("status", "Dynamic Engine Handshake initialized.")
                 

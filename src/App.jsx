@@ -92,7 +92,7 @@ function App() {
 
       {!import.meta.env.PROD && (
         <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
-          <Collapsible.Root>
+          <Collapsible.Root defaultOpen>
             <Collapsible.Trigger
               paddingY="3"
               backgroundColor="red.500"
@@ -103,7 +103,7 @@ function App() {
             </Collapsible.Trigger>
             <Collapsible.Content>
               <Box padding="4" borderWidth="1px">
-                <ReanalyzeButton />
+                <ReanalyzeButton cacheSummary={cacheSummary} />
               </Box>
             </Collapsible.Content>
           </Collapsible.Root>

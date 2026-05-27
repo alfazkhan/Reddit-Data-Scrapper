@@ -30,21 +30,50 @@ classifier_pipeline = pipeline(
     device=-1
 )
 
-# Standard Behavioral Classification Labels
 # Universal Global City Analytics Classification Labels
 CANDIDATE_LABELS = [
-    "Housing, Accommodations & Living Logistics",  # Rentals, buying, utilities, maintenance, roommates, moving
-    "Public Transit, Traffic & Urban Mobility",   # Trains, subways, buses, ticketing, driving, parking, cycling, roads
-    "Local Administration, Law & Politics",      # Public services, paperwork, city council, elections, civil regulations
-    "Jobs, Career & Local Economy",               # Employment, salaries, workspaces, cost of living, local markets
-    "Education, Students & Schools",              # Universities, student life, campus updates, learning resources
-    "Food, Dining & Local Cuisines",              # Restaurants, street food, cafes, groceries, food recommendations
-    "Nightlife, Festivals & Social Events",       # Bars, clubs, concerts, public holidays, community meetups
-    "Tourism, Sightseeing & Local Travel",        # Visitor advice, landmarks, day trips, hospitality, navigation
-    "Sports, Hobbies & Recreation",               # Local fitness, amateur sports, arts, cultural activities, parks
-    "Public Safety, Weather & Emergency Alerts"   # Crime updates, lost items, dangerous weather, neighborhood watches
-]
+    # Housing & Living Accommodations
+    "Rent Prices & Affordability",
+    "Apartment Viewings & Contracts",
+    "Flatmates & Shared Housing",
+    "Landlord Disputes & Evictions",
+    "Utility Bills & Energy Costs",
+    "Home Maintenance & Damage Repairs",
 
+    # Public Transit & Urban Mobility
+    "Subway, Tram & Train Schedules",
+    "Bus Routes & Reliability",
+    "Transit Passes & Ticket Pricing",
+    "Bicycle Lanes & Cycling Safety",
+    "Traffic Congestion & Roadwork",
+    "City Parking & Driving Permits",
+
+    # Local Administration, Law & Politics
+    "City Registration & Paperwork",
+    "Visas & Residence Permits",
+    "Local Elections & Candidates",
+    "City Council Policies & Budgets",
+    "Protests, Strikes & Demonstrations",
+
+    # Jobs & Daily Economy
+    "Job Postings & Career Advice",
+    "Student Shifts & Part-Time Work",
+    "Supermarket Prices & Groceries",
+    "Salaries & Cost of Living Rants",
+
+    # Social Life, Culture & Recreation
+    "Restaurant & Cafe Reviews",
+    "Bars, Nightclubs & Nightlife",
+    "Street Food & Local Cuisines",
+    "Festivals, Concerts & Public Events",
+    "Museums, Art & Theater",
+    "Amateur Sports & Fitness Groups",
+
+    # Public Safety & Travel
+    "Tourist Attractions & Sightseeing",
+    "Neighborhood Safety & Crime Alerts",
+    "Lost Items & Found Belongings"
+]
 logging.info("NLP: Models ready.")
 
 def get_sentiment(text: str) -> str:
