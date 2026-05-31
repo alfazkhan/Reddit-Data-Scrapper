@@ -5,6 +5,9 @@ export default function keywordCount(data) {
     if (!keywords) return;
 
     Object.keys(keywords).forEach((keyword) => {
+      if (Number.isInteger(parseInt(keyword))) {
+        return;
+      }
       counts[keyword] === undefined ? (counts[keyword] = 1) : counts[keyword]++;
     });
   });

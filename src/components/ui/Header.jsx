@@ -1,10 +1,10 @@
 import { Heading, Highlight } from "@chakra-ui/react";
 
-export default function Header() {
+export default function Header({text, highlight}) {
   return (
     <Heading size="5xl">
-      <Highlight query="Analyzer" styles={{ color: "orange.600" }}>
-      Subreddit Analyzer
+      <Highlight query={highlight} styles={{ color: "orange.600" }}>
+      {text}
       </Highlight>
     </Heading>
   );

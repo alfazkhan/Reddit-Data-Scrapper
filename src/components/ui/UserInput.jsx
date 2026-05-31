@@ -12,15 +12,17 @@ import {
   Spinner
 } from "@chakra-ui/react";
 import { useEffect, useState, useMemo } from "react";
-// import { SubredditContext } from "../../store/SubredditContext.jsx";
 import { userInputAction } from "../../store/userInput";
 
 import { useSelector, useDispatch } from "react-redux";
 
-export default function UserInput({ onFetchData, cacheSummary, processingStatus }) {
+export default function UserInput({ onFetchData, processingStatus }) {
   const subreddit = useSelector((state) => state.userInputState.subredditName);
   const targetCount = useSelector(
     (state) => state.userInputState.targetPostCount,
+  );
+  const cacheSummary = useSelector(
+    (state) => state.serverStatusState.cacheSummary,
   );
   const dispatch = useDispatch();
 

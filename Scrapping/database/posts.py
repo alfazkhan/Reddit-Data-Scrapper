@@ -145,11 +145,11 @@ async def get_all_posts_for_dynamic_reanalysis(subreddit: str, target_pipelines:
     args = [subreddit]
     
     if start_date:
-        args.append(start_date)
+        args.append(safe_parse_timestamp(start_date))
         query += f" AND timestamp >= ${len(args)}::timestamp"
         
     if end_date:
-        args.append(end_date)
+        args.append(safe_parse_timestamp(end_date))
         query += f" AND timestamp <= ${len(args)}::timestamp"
     
     # Conditional logic array appending

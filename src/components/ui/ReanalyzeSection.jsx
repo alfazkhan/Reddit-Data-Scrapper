@@ -5,11 +5,16 @@ import {
   Blockquote,
   Text,
   Checkbox,
-  Flex
+  Flex,
+  Box,
+  Center,
+  Spinner,
 } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import ProgressBar from "./ProgressBar.jsx";
 import formatTime from "../../util/formatTime.js";
+import { useSelector } from "react-redux";
+import DateSelector from "./DateSelector.jsx";
 
 const BASE_URL = import.meta.env.PROD
   ? "api.theonlyalfaz.com"
@@ -17,17 +22,24 @@ const BASE_URL = import.meta.env.PROD
 
 const analysisTypesValues = ["Keywords", "Sentiment", "Entities", "Topic"];
 
-export default function ReanalyzeButton({cacheSummary}) {
+export default function ReanalyzeSection() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("Connecting...");
   const [loading, setLoading] = useState(false);
   const [currentStatus, setCurrentStatus] = useState("");
+  const cacheSummary = useSelector(
+    (state) => state.serverStatusState.cacheSummary,
+  );
+  // console.log(cacheSummary);
+  const loadingData = Object.keys(cacheSummary).length === 0;
 
   //Data to be sent
-  const [subredditIDS, setSubredditIDS] = useState([])
+  const [subredditIDS, setSubredditIDS] = useState([]);
   const [analysisTypes, setAnalysisTypes] = useState([]);
   const [onlyNull, setOnlyNull] = useState(false);
+  const [dateRange, setDateRange] = useState();
 
+  //Processing
   const [processed, setProcessed] = useState(0);
   const [totalPost, setTotalPosts] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState("");
@@ -134,23 +146,23 @@ export default function ReanalyzeButton({cacheSummary}) {
     };
   }, []);
 
-  function handleAnalysisTypes(type,checked) {
+  function handleAnalysisTypes(type, checked) {
     console.log(type.toLowerCase());
     const currentTypes = [...analysisTypes];
     // console.log(currentTypes);
-    const index = currentTypes.findIndex((e) => e === type.toLowerCase())
+    const index = currentTypes.findIndex((e) => e === type.toLowerCase());
     if (index === -1 && checked) {
       currentTypes.push(type.toLowerCase());
       setAnalysisTypes(currentTypes);
-    }else{
-      currentTypes.splice(index,1)
-      setAnalysisTypes(currentTypes)
+    } else {
+      currentTypes.splice(index, 1);
+      setAnalysisTypes(currentTypes);
     }
   }
 
-  function handleSubredditIDS(id,checked) {
+  function handleSubredditIDS(id, checked) {
     const currentIDS = [...subredditIDS];
-    console.log(id)
+    console.log(id);
     const index = currentIDS.findIndex((e) => e === id);
     if (index === -1 && checked) {
       currentIDS.push(id);
@@ -160,7 +172,6 @@ export default function ReanalyzeButton({cacheSummary}) {
       setSubredditIDS(currentIDS);
     }
   }
-
 
   const sendAction = (actionName) => {
     if (actionName === "pause" || actionName === "stop") {
@@ -172,29 +183,29 @@ export default function ReanalyzeButton({cacheSummary}) {
       setTimeRemaining("");
     }
 
-    
-    const confirmStart = confirm(`Do you want to start analysis on ${analysisTypes} with Only Null as ${onlyNull}`)
-    if(!confirmStart){
-      console.log(
-        JSON.stringify({
-          action: actionName,
-          pipelines: analysisTypes,
-          only_null: onlyNull,
-          subreddits: subredditIDS,
-        }),
-      );
-      return 
+    const data = {
+      action: actionName,
+      pipelines: analysisTypes,
+      only_null: onlyNull,
+      subreddits: subredditIDS,
+      start_date: dateRange[0],
+      end_date: dateRange[1],
+    };
+
+    const confirmStart = confirm(
+      `Do you want to start analysis on ${analysisTypes} from ${dateRange[0].split("-").reverse().join("-")} to ${dateRange[1].split("-").reverse().join("-")} with Only Null as ${onlyNull}`,
+    );
+    if (!confirmStart) {
+      console.log(JSON.stringify(data));
+      return;
     }
 
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN && confirmStart) {
-      socketRef.current.send(
-        JSON.stringify({
-          action: actionName,
-          pipelines: analysisTypes,
-          only_null: onlyNull,
-          subreddits: subredditIDS,
-        }),
-      );
+    if (
+      socketRef.current &&
+      socketRef.current.readyState === WebSocket.OPEN &&
+      confirmStart
+    ) {
+      socketRef.current.send(JSON.stringify(data));
     } else {
       console.error("Cannot send command: WebSocket is disconnected.");
     }
@@ -239,8 +250,10 @@ export default function ReanalyzeButton({cacheSummary}) {
       <HStack gap={4} borderWidth={0.5} p={5} borderColor="orange.400">
         {analysisTypesValues.map((type) => (
           <Checkbox.Root
-            checked={analysisTypes.findIndex((e) => e === type.toLowerCase()) !== -1}
-            onCheckedChange={(e) => handleAnalysisTypes(type,e.checked)}
+            checked={
+              analysisTypes.findIndex((e) => e === type.toLowerCase()) !== -1
+            }
+            onCheckedChange={(e) => handleAnalysisTypes(type, e.checked)}
             key={type}
           >
             <Checkbox.HiddenInput />
@@ -250,19 +263,47 @@ export default function ReanalyzeButton({cacheSummary}) {
         ))}
       </HStack>
 
-      <Flex borderWidth={0.5} p={5} borderColor="orange.400" overflow="scroll" flexWrap="wrap" gap={4}>
-        {Object.keys(cacheSummary).map((sub) => (
-          <Checkbox.Root
-            checked={subredditIDS.findIndex((e) => e === cacheSummary[sub].id) !== -1}
-            onCheckedChange={(e) => handleSubredditIDS(cacheSummary[sub].id,e.checked)}
-            key={cacheSummary[sub].id}
-          >
-            <Checkbox.HiddenInput />
-            <Checkbox.Control />
-            <Checkbox.Label>{sub}</Checkbox.Label>
-          </Checkbox.Root>
-        ))}
+      <Flex
+        borderWidth={0.5}
+        p={5}
+        borderColor="orange.400"
+        overflow="scroll"
+        flexWrap="wrap"
+        gap={4}
+      >
+        {loadingData ? (
+          // <Box pos="absolute" inset="0" bg="gray.700/80">
+          <Center h="full">
+            <Spinner
+              borderWidth="4px"
+              size="xl"
+              color="orange.600"
+              animationDuration="0.6s"
+            />
+          </Center>
+        ) : (
+          // </Box>
+          Object.keys(cacheSummary).map((sub) => (
+            <Checkbox.Root
+              checked={
+                subredditIDS.findIndex((e) => e === cacheSummary[sub].id) !== -1
+              }
+              onCheckedChange={(e) =>
+                handleSubredditIDS(cacheSummary[sub].id, e.checked)
+              }
+              key={cacheSummary[sub].id}
+            >
+              <Checkbox.HiddenInput />
+              <Checkbox.Control />
+              <Checkbox.Label>{sub}</Checkbox.Label>
+            </Checkbox.Root>
+          ))
+        )}
       </Flex>
+
+      <HStack gap={4} borderWidth={0.5} p={5} borderColor="orange.400">
+        <DateSelector dateSetter={setDateRange} />
+      </HStack>
 
       <HStack>
         <Checkbox.Root
@@ -281,7 +322,7 @@ export default function ReanalyzeButton({cacheSummary}) {
           color="white"
           fontWeight="black"
           bg="red.700"
-          disabled={loading}
+          disabled={loading || loadingData}
           onClick={() => sendAction("start")}
         >
           Start Analysis
@@ -291,7 +332,7 @@ export default function ReanalyzeButton({cacheSummary}) {
           color="white"
           fontWeight="black"
           bg="orange.600"
-          disabled={loading}
+          disabled={loading || loadingData}
           onClick={() => sendControlAction("pause")}
         >
           Pause
@@ -301,7 +342,7 @@ export default function ReanalyzeButton({cacheSummary}) {
           color="white"
           fontWeight="black"
           bg="orange.600"
-          disabled={loading}
+          disabled={loading || loadingData}
           onClick={() => sendControlAction("resume")}
         >
           Resume
@@ -311,7 +352,7 @@ export default function ReanalyzeButton({cacheSummary}) {
           color="white"
           fontWeight="black"
           bg="orange.600"
-          disabled={loading}
+          disabled={loading || loadingData}
           onClick={() => sendControlAction("stop")}
         >
           Stop
