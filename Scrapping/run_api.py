@@ -2,14 +2,25 @@ import os
 import logging
 import sys
 import uvicorn
+import firebase_admin
+from firebase_admin import credentials
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from Routes import routes_posts, routes_subreddits, routes_reanalyze, routes_ignored_words
+
+# Domain-specific decouple routing modules assignments
+from Routes import routes_posts, routes_subreddits, routes_reanalyze, routes_ignored_words, routes_users
 
 IS_PRODUCTION = os.getenv("APP_ENV") == "production"
 API_HOST = "0.0.0.0" if IS_PRODUCTION else "192.168.0.246"
 
-app = FastAPI(title="Reddit BI REST API Gateway", version="2.5.0")
+# Initialize Firebase Admin SDK prior to spinning up network dependencies
+if os.path.exists("firebase_creds.json"):
+    cred = credentials.Certificate("firebase_creds.json")
+    firebase_admin.initialize_app(cred)
+else:
+    raise RuntimeError("Critical Failure: Missing firebase_creds.json administrative credential files container.")
+
+app = FastAPI(title="Subreddit Scrapper REST API Gateway", version="3.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,15 +30,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount all HTTP and WebSocket controllers
+# Mount all underlying platform controllers
 app.include_router(routes_posts.router)
 app.include_router(routes_subreddits.router)
 app.include_router(routes_reanalyze.router)
 app.include_router(routes_ignored_words.router)
+app.include_router(routes_users.router)  # Dedicated Identity System Controls Routing Channel
 
 logging.basicConfig(
-    level=logging.INFO, format='[%(asctime)s] API-SERVER: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S', handlers=[logging.StreamHandler(sys.stdout)], force=True
+    level=logging.INFO, 
+    format='[%(asctime)s] API-SERVER: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S', 
+    handlers=[logging.StreamHandler(sys.stdout)], 
+    force=True
 )
 
 if __name__ == "__main__":

@@ -2,9 +2,10 @@ import asyncio
 import logging
 import os
 import json
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from nlp_processor import get_sentiment, extract_keywords, extract_entities, classify_topics
 
+from auth_guard import verify_client_identity_ws
 # Database modules
 from database.subreddits import db_get_all_subreddits
 from database.posts import get_all_posts_for_dynamic_reanalysis, update_post_nlp_data
@@ -205,7 +206,7 @@ async def dynamic_pipeline_orchestrator(target_pipelines: list, only_null: bool,
 
 
 @router.websocket("/ws/reanalyze")
-async def reanalyze_endpoint(websocket: WebSocket):
+async def reanalyze_endpoint(websocket: WebSocket, client: dict = Depends(verify_client_identity_ws)):
     await websocket.accept()
     await global_manager.register_client(websocket)
     
@@ -213,7 +214,27 @@ async def reanalyze_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
             action = data.get("action")
-            
+
+            if action in {"start", "pause", "resume", "stop"} and client["role"] != "Super Admin":
+                await websocket.send_json({
+                    "type": "error",
+                    "current_status": global_manager.current_status,
+                    "message": "Unauthorized. Only Super Admin may control reanalysis."
+                })
+                continue
+
+            if action == "status":
+                await websocket.send_json({
+                    "type": "info",
+                    "current_status": global_manager.current_status,
+                    "subreddit": global_manager.subreddit,
+                    "processed": global_manager.processed,
+                    "total": global_manager.total,
+                    "percent": global_manager.percent,
+                    "message": "Realtime reanalysis status snapshot."
+                })
+                continue
+
             if action == "start":
                 if global_manager.active_task and not global_manager.active_task.done():
                     await websocket.send_json({
@@ -254,5 +275,11 @@ async def reanalyze_endpoint(websocket: WebSocket):
                 global_manager.current_status = "stopped"
                 await global_manager.broadcast_payload("status", "Task process termination forced.")
                 
+            else:
+                await websocket.send_json({
+                    "type": "error",
+                    "current_status": global_manager.current_status,
+                    "message": "Unsupported action. Allowed actions: status, start, pause, resume, stop."
+                })
     except WebSocketDisconnect:
         global_manager.unregister_client(websocket)

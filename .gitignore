@@ -29,3 +29,5 @@ __pycache__
 
 Scrapping/auth.json
 Scrapping/config.py
+Scrapping/firebase_creds.json
+Scrapping/Routes/__pycache__/

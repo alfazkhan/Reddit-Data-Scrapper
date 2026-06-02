@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import Optional, List
 
+from auth_guard import require_role
 # New explicit database module imports
 from database.subreddits import (
     db_create_subreddit, db_get_all_subreddits, db_get_subreddit,
@@ -24,7 +25,10 @@ class SubredditUpdate(BaseModel):
     keep_updated: Optional[bool] = False
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_new_target(payload: SubredditBase):
+async def create_new_target(
+    payload: SubredditBase,
+    super_admin: dict = Depends(require_role(["Super Admin"]))
+):
     sub_id = await db_create_subreddit(
         name=payload.name,
         description=payload.description,
@@ -46,7 +50,11 @@ async def fetch_target_details(name: str):
     return sub
 
 @router.put("/{name}")
-async def modify_target_configuration(name: str, payload: SubredditUpdate):
+async def modify_target_configuration(
+    name: str,
+    payload: SubredditUpdate,
+    super_admin: dict = Depends(require_role(["Super Admin"]))
+):
     existing = await db_get_subreddit(name)
     if not existing:
         raise HTTPException(status_code=404, detail="Subreddit target entry not found")
@@ -63,7 +71,10 @@ async def modify_target_configuration(name: str, payload: SubredditUpdate):
     return {"message": "Tracking settings updated successfully"}
 
 @router.delete("/{name}")
-async def untrack_and_purge_target(name: str):
+async def untrack_and_purge_target(
+    name: str,
+    super_admin: dict = Depends(require_role(["Super Admin"]))
+):
     success = await db_delete_subreddit(name)
     if not success:
         raise HTTPException(status_code=404, detail="Subreddit target record not found or already deleted")

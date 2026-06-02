@@ -93,6 +93,52 @@ async def get_cache_summary():
         ''')
         return {r['name']: {"id": r['id'], "count": r['count'], "last_updated": r['last_updated'].isoformat() if r['last_updated'] else None} for r in rows}
 
+
+async def db_update_post(post_id: str, updates: dict):
+    if not updates:
+        return False
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        set_clauses = []
+        args = []
+
+        if "title" in updates:
+            args.append(updates["title"])
+            set_clauses.append(f"title = ${len(args)}")
+        if "body" in updates:
+            args.append(updates["body"])
+            set_clauses.append(f"body = ${len(args)}")
+        if "sentiment" in updates:
+            args.append(updates["sentiment"])
+            set_clauses.append(f"sentiment = ${len(args)}")
+        if "keywords" in updates:
+            args.append(json.dumps(updates["keywords"]))
+            set_clauses.append(f"keywords = ${len(args)}")
+        if "entities" in updates:
+            args.append(json.dumps(updates["entities"]))
+            set_clauses.append(f"entities = ${len(args)}")
+        if "topics" in updates:
+            args.append(json.dumps(updates["topics"]))
+            set_clauses.append(f"topics = ${len(args)}")
+
+        if not set_clauses:
+            return False
+
+        args.append(post_id)
+        query = f"UPDATE reddit_posts SET {', '.join(set_clauses)} WHERE id = ${len(args)}"
+        status = await conn.execute(query, *args)
+        return status == "UPDATE 1"
+
+
+async def db_delete_post(post_id: str):
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        status = await conn.execute('''
+            DELETE FROM reddit_posts WHERE id = $1
+        ''', post_id)
+        return status == "DELETE 1"
+
+
 async def get_post_content_for_reanalysis(subreddit_name: str):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
