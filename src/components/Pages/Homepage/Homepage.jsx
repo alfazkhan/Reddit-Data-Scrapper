@@ -9,6 +9,7 @@ import UpcomingFeatures from "../../Feature Tracker/UpcomingFeatures.jsx";
 import { Link } from "react-router-dom";
 
 import { BASE_URL } from "../../../Constants.js";
+import Logs from "@/components/ui-components/Logs.jsx";
 
 export default function Homepage() {
   const [posts, setPosts] = useState([]);
@@ -45,17 +46,20 @@ export default function Homepage() {
         />
         <SubredditsSuggestions />
       </Flex>
+      {/* <Flex justifyContent="center" gap="2" margin="5" flexDirection="column">
+        <Logs/>
+      </Flex> */}
 
       {(posts.length !== 0 || processingStatus) && (
         <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
           <DataTabs postsData={posts} processingStatus={processingStatus} />
         </Flex>
       )}
-      {import.meta.env.PROD && (
+      {/* {import.meta.env.PROD && (
         <Flex justifyContent="center" gap="4" margin="5" flexDirection="column">
           <UpcomingFeatures />
         </Flex>
-      )}
+      )} */}
     </Flex>
   );
 }

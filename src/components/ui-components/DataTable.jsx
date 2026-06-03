@@ -7,20 +7,20 @@ export default function DataTable({ tableHeaders, children }) {
       <Table.Root
         colorPalette="orange"
         variant="outline"
-        showColumnBorder
+        // showColumnBorder
         stickyHeader
       >
         <Table.Caption />
         <Table.Header>
           <Table.Row>
             {tableHeaders.map((header)=>(
-            <Table.ColumnHeader color="orange.600" fontWeight="extrabold" key={header}>
+            <Table.ColumnHeader color="orange.600" fontWeight="extrabold" key={header} textAlign="center">
               {header}
             </Table.ColumnHeader>
             ))}
           </Table.Row>
         </Table.Header>
-        <Table.Body>
+        <Table.Body justifyContent="center">
           {children}
         </Table.Body>
       </Table.Root>

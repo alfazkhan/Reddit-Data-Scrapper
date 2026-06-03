@@ -104,9 +104,13 @@ async def run_dynamic_text_reanalysis(subreddit: str, target_pipelines: list, on
     total_posts = len(posts)
     
     if not total_posts:
-        msg_empty = f"r/{subreddit} | No items required processing for targeted specs: {target_pipelines}"
+        msg_empty = (
+            f"r/{subreddit} | No posts found matching the specified criteria. "
+            f"Filters: pipelines={target_pipelines}, only_null={only_null}, "
+            f"start_date={start_date}, end_date={end_date}."
+        )
         logging.info(msg_empty)
-        await global_manager.broadcast_payload("info", msg_empty)
+        await global_manager.broadcast_payload("info", f"r/{subreddit} | No posts found matching the criteria. Check filters or database content.")
         return
 
     global_manager.total = total_posts
@@ -167,10 +171,16 @@ async def dynamic_pipeline_orchestrator(target_pipelines: list, only_null: bool,
         global_manager.current_status = "running"
         all_subs = await db_get_all_subreddits()
         
+
+        # Filter target subreddits based on the provided list of names or IDs
         if target_subreddits:
+            # Defensively separate potential IDs (int) from names (str)
+            target_ids = {item for item in target_subreddits if isinstance(item, int)}
+            target_names = {item for item in target_subreddits if isinstance(item, str)}
+
             subreddits = [
-                sub['name'] for sub in all_subs 
-                if sub.get('is_active') is True and (sub['name'] in target_subreddits or sub.get('id') in target_subreddits)
+                sub['name'] for sub in all_subs
+                if sub.get('is_active') is True and (sub['name'] in target_names or sub.get('id') in target_ids)
             ]
         else:
             subreddits = [sub['name'] for sub in all_subs if sub.get('is_active') is True]
@@ -183,6 +193,7 @@ async def dynamic_pipeline_orchestrator(target_pipelines: list, only_null: bool,
             return
 
         ignored_words = await get_all_ignored_words()
+        print("Ignored Words:", ignored_words)
 
         for sub in subreddits:
             if global_manager.stop_event.is_set():

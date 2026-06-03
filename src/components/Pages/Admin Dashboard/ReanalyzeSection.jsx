@@ -27,6 +27,7 @@ export default function ReanalyzeSection() {
   const cacheSummary = useSelector(
     (state) => state.serverStatusState.cacheSummary,
   );
+  const token = useSelector(state=> state.authState.token)
 
   const loadingData = Object.keys(cacheSummary).length === 0;
 
@@ -39,8 +40,8 @@ export default function ReanalyzeSection() {
   let day = parseInt(date.getDate()) < 10 ? "0" + date.getDate() : date.getDate();
   let month = parseInt(date.getMonth()) < 10 ? "0" + (date.getMonth() + 1) : (date.getMonth() + 1);
   let year = date.getFullYear();
-  let currentDate = `${year}/${month}/${day}`;
-  const [dateRange, setDateRange] = useState(["2026/01/01", currentDate]);
+  let currentDate = `${year}-${month}-${day}`;
+  const [dateRange, setDateRange] = useState(["2026-01-01", currentDate]);
 
   //Processing
   const [processed, setProcessed] = useState(0);
@@ -55,7 +56,7 @@ export default function ReanalyzeSection() {
 
   useEffect(() => {
     // console.log(`Connecting to WebSocket channel via: ${wsUrl}`);
-    const socket = new WebSocket(wsUrl);
+    const socket = new WebSocket(`${wsUrl}?token=${token}`);
     socketRef.current = socket;
 
     socket.onopen = () => {
@@ -144,8 +145,22 @@ export default function ReanalyzeSection() {
     };
   }, []);
 
+
+  function selectAllSubreddits(){
+      const allSubreddits = []
+      Object.values(cacheSummary).map((e)=>{
+        allSubreddits.push(e.id)
+      })
+      setSubredditIDS(allSubreddits)
+  }
+
   function handleAnalysisTypes(type, checked) {
-    console.log(type.toLowerCase());
+
+    if(type === "Keywords"){
+      selectAllSubreddits()
+    }
+
+    // console.log(type.toLowerCase());
     const currentTypes = [...analysisTypes];
     // console.log(currentTypes);
     const index = currentTypes.findIndex((e) => e === type.toLowerCase());
@@ -179,6 +194,10 @@ export default function ReanalyzeSection() {
     if (actionName === "stop" || actionName === "pause") {
       lastTimeRef.current = null;
       setTimeRemaining("");
+    }
+
+    if(analysisTypes.findIndex((e)=> e === "keywords") !== -1){
+      selectAllSubreddits()
     }
 
     const data = {

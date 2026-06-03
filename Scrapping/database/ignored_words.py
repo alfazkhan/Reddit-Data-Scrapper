@@ -5,6 +5,7 @@ async def get_all_ignored_words() -> set:
     async with pool.acquire() as conn:
         # Only fetch words that have been explicitly approved
         rows = await conn.fetch("SELECT word FROM ignored_words WHERE approved = TRUE")
+        print("ROWS:",rows)
         return {row['word'] for row in rows}
 
 async def mark_ignored_words_as_processed():

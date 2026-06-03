@@ -181,8 +181,9 @@ async def update_post_keywords_only(post_id: str, keywords: dict):
         
 async def get_all_posts_for_dynamic_reanalysis(subreddit: str, target_pipelines: list, only_null: bool, start_date: str = None, end_date: str = None):
     """
-    Dynamically loads text records from PostgreSQL based on the requested features 
-    and whether we should only target entries with missing values.
+    Dynamically loads text records from PostgreSQL based on the requested features.
+    If only_null is True, it acts as an optimization fill.
+    If only_null is False, it fetches all records in the date window for a full overwrite.
     """
     pool = await get_db_pool()
     
@@ -198,24 +199,24 @@ async def get_all_posts_for_dynamic_reanalysis(subreddit: str, target_pipelines:
         args.append(safe_parse_timestamp(end_date))
         query += f" AND timestamp <= ${len(args)}::timestamp"
     
-    # Conditional logic array appending
-    if only_null and target_pipelines:
-        null_clauses = []
+    # Only append column filters if we are doing a targeted null-fill operation
+    if target_pipelines and only_null:
+        clauses = []
         for feature in target_pipelines:
             if feature == "sentiment":
-                null_clauses.append("sentiment IS NULL")
+                clauses.append("sentiment IS NULL")
             elif feature == "keywords":
-                null_clauses.append("keywords IS NULL")
+                clauses.append("keywords IS NULL")
             elif feature == "entities":
-                null_clauses.append("entities IS NULL")
+                clauses.append("entities IS NULL")
             elif feature == "topic":
-                # Handles both traditional database NULLs and JSON array '[null]' string values
-                null_clauses.append("(topics IS NULL OR topics::text = '[null]')")
-        
-        if null_clauses:
-            query += " AND (" + " OR ".join(null_clauses) + ")"
-            
+                clauses.append("(topics IS NULL OR topics::text = '[null]')")
+        if clauses:
+            query += " AND (" + " OR ".join(clauses) + ")"
+
     query += " ORDER BY timestamp DESC;"
+    
+    print(f"Executing reanalysis query: {query}")
     
     async with pool.acquire() as conn:
         rows = await conn.fetch(query, *args)

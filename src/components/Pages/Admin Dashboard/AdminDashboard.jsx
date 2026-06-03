@@ -3,6 +3,7 @@ import Header from "../../ui-components/Header";
 import IgnoredWordsSection from "./IgnoredWordsSection";
 import ReanalyzeSection from "./ReanalyzeSection";
 import { Flex, Tabs } from "@chakra-ui/react";
+import SubredditsSection from "./SubredditsSection";
 
 export default function AdminDashboard() {
   return (
@@ -21,13 +22,13 @@ export default function AdminDashboard() {
         }}
       >
         <Tabs.List>
-          <Tabs.Trigger value="tasks">Subreddits</Tabs.Trigger>
+          <Tabs.Trigger value="subreddits">Subreddits</Tabs.Trigger>
           <Tabs.Trigger value="ignored_words">Ignored Words</Tabs.Trigger>
           <Tabs.Trigger value="reanalyze">Reanalyze Data</Tabs.Trigger>
         </Tabs.List>
 
-        <Tabs.Content value="tasks">
-          Manage your tasks and their progress here.
+        <Tabs.Content value="subreddits">
+          <SubredditsSection/>
         </Tabs.Content>
         <Tabs.Content value="ignored_words">
           <IgnoredWordsSection />
