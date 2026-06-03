@@ -33,9 +33,7 @@ const router = createBrowserRouter([
 
 function App() {
   const dispatch = useDispatch();
-  // const [isAuthResolving, setIsAuthResolving] = useState(true);
 
-  // 1. Fetch public API endpoints (Summary)
   useEffect(() => {
     async function fetchPostData() {
       try {
@@ -57,7 +55,6 @@ function App() {
     fetchPostData();
   }, [dispatch]);
 
-  // 2. Manage Global Authentication Status & Session Persistence
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
@@ -75,6 +72,7 @@ function App() {
 
         if (response.ok) {
           const dbUser = await response.json();
+          console.log(dbUser)
           dispatch(
             authSliceActions.setCredentials({
               user: {

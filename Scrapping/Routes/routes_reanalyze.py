@@ -2,18 +2,22 @@ import asyncio
 import logging
 import os
 import json
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+import uuid
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, Query
 from typing import Optional
 from nlp_processor import get_sentiment, extract_keywords, extract_entities, classify_topics
 
-from auth_guard import get_optional_client_identity_ws
+# Leverage your existing unified HTTP security interceptor directly
+from auth_guard import verify_client_identity
 # Database modules
 from database.subreddits import db_get_all_subreddits
 from database.posts import get_all_posts_for_dynamic_reanalysis, update_post_nlp_data
 from database.ignored_words import get_all_ignored_words, mark_ignored_words_as_processed
 
-router = APIRouter()
+router = APIRouter(tags=["Reanalyze Socket Control Layer"])
 
+# Memory matrix cache tracking single-use active tickets (Ticket ID -> User Object)
+_ws_auth_tickets = {}
 
 class GlobalPipelineManager:
     """
@@ -99,7 +103,6 @@ async def run_dynamic_text_reanalysis(subreddit: str, target_pipelines: list, on
     logging.info(msg_init)
     await global_manager.broadcast_payload("status", msg_init)
 
-    # Queries records directly matching structural array conditions
     posts = await get_all_posts_for_dynamic_reanalysis(subreddit, target_pipelines, only_null, start_date, end_date)
     total_posts = len(posts)
     
@@ -126,7 +129,6 @@ async def run_dynamic_text_reanalysis(subreddit: str, target_pipelines: list, on
         pid = row['id']
         combined_text = f"{row['title'] or ''} {row['body'] or ''}"
 
-        # Conditional extraction allocations based strictly on incoming array specifications
         sentiment = get_sentiment(combined_text) if "sentiment" in target_pipelines else row.get('sentiment')
         
         if "keywords" in target_pipelines:
@@ -148,10 +150,8 @@ async def run_dynamic_text_reanalysis(subreddit: str, target_pipelines: list, on
             except Exception:
                 topics = row.get('topics') or {}
 
-        # Persist data states
         await update_post_nlp_data(pid, sentiment, keywords, entities, topics)
 
-        # Real-time metrics streaming
         percent = round((count / total_posts) * 100, 1)
         msg_prog = f"r/{subreddit} | Dynamic Progress: {count}/{total_posts} ({percent}%)"
         
@@ -161,7 +161,6 @@ async def run_dynamic_text_reanalysis(subreddit: str, target_pipelines: list, on
         logging.info(msg_prog)
         await global_manager.broadcast_payload("progress", msg_prog)
         
-        # CPU-breathing anchor to avoid server thread locks
         await asyncio.sleep(0.1)
 
 
@@ -170,11 +169,8 @@ async def dynamic_pipeline_orchestrator(target_pipelines: list, only_null: bool,
     try:
         global_manager.current_status = "running"
         all_subs = await db_get_all_subreddits()
-        
 
-        # Filter target subreddits based on the provided list of names or IDs
         if target_subreddits:
-            # Defensively separate potential IDs (int) from names (str)
             target_ids = {item for item in target_subreddits if isinstance(item, int)}
             target_names = {item for item in target_subreddits if isinstance(item, str)}
 
@@ -201,7 +197,6 @@ async def dynamic_pipeline_orchestrator(target_pipelines: list, only_null: bool,
             await run_dynamic_text_reanalysis(sub, target_pipelines, only_null, ignored_words, start_date, end_date)
 
         if not global_manager.stop_event.is_set():
-            # Post-processing flag update for keyword pipelines
             if "keywords" in target_pipelines:
                 await mark_ignored_words_as_processed()
                 
@@ -217,8 +212,48 @@ async def dynamic_pipeline_orchestrator(target_pipelines: list, only_null: bool,
         await global_manager.broadcast_payload("error", msg_fail)
 
 
+@router.post("/ws/ticket")
+async def generate_websocket_ticket(client: dict = Depends(verify_client_identity)):
+    """
+    Exchanges a highly sensitive Firebase Bearer token for a short-lived, 
+    single-use ticket specifically for secure WebSocket handshakes.
+    Matches HTTP route mapping layout under Router prefixes.
+    """
+    if not client or client.get("role") != "Super Admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized access profile. Super Admin permissions required."
+        )
+    
+    ticket_id = str(uuid.uuid4())
+    _ws_auth_tickets[ticket_id] = client
+    
+    async def expire_ticket():
+        await asyncio.sleep(30)
+        _ws_auth_tickets.pop(ticket_id, None)
+        
+    asyncio.create_task(expire_ticket())
+    
+    return {"ticket": ticket_id}
+
+
 @router.websocket("/ws/reanalyze")
-async def reanalyze_endpoint(websocket: WebSocket, client: Optional[dict] = Depends(get_optional_client_identity_ws)):
+async def reanalyze_endpoint(websocket: WebSocket, ticket: str = Query(...)):
+    """
+    Secured WebSocket upgrading route utilizing single-use exchange tickets 
+    to prevent token exposure in server transit routing parameters.
+    """
+    client = _ws_auth_tickets.pop(ticket, None)
+    
+    if not client:
+        await websocket.accept()
+        await websocket.send_json({
+            "type": "error",
+            "message": "Authentication failed: Invalid or expired ticket token profile."
+        })
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await websocket.accept()
     await global_manager.register_client(websocket)
     
@@ -228,11 +263,11 @@ async def reanalyze_endpoint(websocket: WebSocket, client: Optional[dict] = Depe
             action = data.get("action")
 
             if action in {"start", "pause", "resume", "stop"}:
-                if not client or client.get("role") != "Super Admin":
+                if client.get("role") != "Super Admin":
                     await websocket.send_json({
                         "type": "error",
                         "current_status": global_manager.current_status,
-                        "message": "Unauthorized. Only Super Admin may control reanalysis."
+                        "message": "Unauthorized. Only Super Admin may control reanalysis endpoints."
                     })
                     continue
 

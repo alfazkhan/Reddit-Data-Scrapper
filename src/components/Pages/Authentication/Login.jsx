@@ -19,8 +19,8 @@ import { authSliceActions } from "@/store/authSlice";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const [email, setEmail] = useState("khanalfaaz14@gmail.com");
-  const [password, setPassword] = useState("superadmin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -42,12 +42,7 @@ export default function Login() {
 
       const token = await userCredentials.user.getIdToken();
       
-      const tokenDetails = {
-        token: token,
-        created_at: Date.now()
-      }
-      console.log(tokenDetails)
-      localStorage.setItem("tokenDetails",JSON.stringify(tokenDetails))
+
 
       const response = await fetch(`${BASE_URL}/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -56,6 +51,7 @@ export default function Login() {
       if (!response.ok) throw new Error("Database profile sync failed."); //Throwing error if there's a user mismatch
       
       const dbUser = await response.json();
+      console.log(dbUser)
       
       dispatch(
         authSliceActions.setCredentials({

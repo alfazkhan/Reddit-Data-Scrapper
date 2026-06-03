@@ -39,7 +39,7 @@ async def create_user_profile(
         fb_user = firebase_auth.create_user(email=email, password=password, display_name=name)
         
         # 2. Replicate state records down into PostgreSQL tracking maps
-        success = await db_create_user_profile(fb_user.uid, email, role, calls_limit)
+        success = await db_create_user_profile(fb_user.uid, email, name, role, calls_limit)
         if not success:
             raise HTTPException(status_code=500, detail="Identity added to Firebase, but local DB compilation conflicted.")
             
@@ -68,6 +68,7 @@ async def fetch_current_client_profile(client: dict = Depends(verify_client_iden
     """Returns profile parameters and verified scope assignments for the active caller."""
     return {
         "id": client["id"],
+        "name": client["name"],
         "email": client["email"],
         "role": client["role"],
         "authenticated_via": client["auth_type"]

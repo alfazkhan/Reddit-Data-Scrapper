@@ -5,7 +5,7 @@ async def db_get_all_users():
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('''
-            SELECT id, firebase_uid, email, role, api_calls_limit, api_calls_count, created_at 
+            SELECT id, firebase_uid, name, email, role, api_calls_limit, api_calls_count, created_at 
             FROM users 
             ORDER BY created_at DESC
         ''')
@@ -38,21 +38,21 @@ async def db_delete_user_profile(user_id: int):
         return status == "DELETE 1"
 
 
-async def db_create_user_profile(uid: str, email: str, role: str, limit: int) -> bool:
+async def db_create_user_profile(uid: str, email: str, name: str, role: str, limit: int) -> bool:
     pool = await get_db_pool()
     query = """
-        INSERT INTO public.users (firebase_uid, email, role, api_calls_limit)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO public.users (firebase_uid, email, name, role, api_calls_limit)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (firebase_uid) DO NOTHING;
     """
     async with pool.acquire() as conn:
-        result = await conn.execute(query, uid, email, role, limit)
+        result = await conn.execute(query, uid, email, name, role, limit)
         return "INSERT" in result
 
 async def db_get_user_by_api_key(api_key: str):
     pool = await get_db_pool()
     query = """
-        SELECT id, email, role, api_calls_limit, api_calls_count 
+        SELECT id, name, email, role, api_calls_limit, api_calls_count 
         FROM public.users 
         WHERE api_key = $1;
     """
@@ -62,7 +62,7 @@ async def db_get_user_by_api_key(api_key: str):
 async def db_get_user_by_uid(uid: str):
     pool = await get_db_pool()
     query = """
-        SELECT id, email, role 
+        SELECT id, name, email, role 
         FROM public.users 
         WHERE firebase_uid = $1;
     """

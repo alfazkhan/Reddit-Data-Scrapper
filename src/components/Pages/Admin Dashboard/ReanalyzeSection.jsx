@@ -78,7 +78,7 @@ export default function ReanalyzeSection() {
         }
 
         const { ticket } = await response.json();
-        
+
 
         // Safe unmount abort branch guard checkpoint 
         if (!isCurrent) return;

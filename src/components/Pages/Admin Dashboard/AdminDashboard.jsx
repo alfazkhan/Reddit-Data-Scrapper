@@ -18,7 +18,7 @@ export default function AdminDashboard() {
       </Flex>
       <Tabs.Root
         variant="subtle"
-        defaultValue="manage-users"
+        defaultValue="reanalyze"
         orientation="vertical"
         css={{
           "--tabs-indicator-bg": "colors.gray.subtle",

@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Domain-specific decouple routing modules assignments
-from Routes import routes_posts, routes_subreddits, routes_reanalyze, routes_ignored_words, routes_users
+from Routes import routes_posts, routes_subreddits, routes_reanalyze, routes_ignored_words, routes_users, routes_reanalyze
 
 IS_PRODUCTION = os.getenv("APP_ENV") == "production"
 API_HOST = "0.0.0.0" if IS_PRODUCTION else "192.168.0.246"
@@ -35,7 +35,8 @@ app.include_router(routes_posts.router)
 app.include_router(routes_subreddits.router)
 app.include_router(routes_reanalyze.router)
 app.include_router(routes_ignored_words.router)
-app.include_router(routes_users.router)  # Dedicated Identity System Controls Routing Channel
+app.include_router(routes_users.router) 
+app.include_router(routes_reanalyze.router)
 
 logging.basicConfig(
     level=logging.INFO, 

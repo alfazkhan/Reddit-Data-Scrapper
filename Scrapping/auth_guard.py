@@ -39,6 +39,7 @@ async def verify_client_identity(
         await db_increment_api_usage(user_record["id"])
         return {
             "id": user_record["id"], 
+            "name": user_record["name"],
             "email": user_record["email"], 
             "role": user_record["role"], 
             "auth_type": "api_key"
@@ -62,6 +63,7 @@ async def verify_client_identity(
             
         return {
             "id": user_record["id"], 
+            "name": user_record["name"],
             "email": user_record["email"], 
             "role": user_record["role"], 
             "auth_type": "firebase"
@@ -94,6 +96,7 @@ async def verify_client_identity_ws(websocket: WebSocket) -> dict:
         await db_increment_api_usage(user_record["id"])
         return {
             "id": user_record["id"],
+            "name": user_record["name"],
             "email": user_record["email"],
             "role": user_record["role"],
             "auth_type": "api_key"
@@ -115,6 +118,7 @@ async def verify_client_identity_ws(websocket: WebSocket) -> dict:
             )
         return {
             "id": user_record["id"],
+            "name": user_record["name"],
             "email": user_record["email"],
             "role": user_record["role"],
             "auth_type": "firebase"
@@ -164,6 +168,7 @@ async def get_optional_client_identity_ws(websocket: WebSocket) -> Optional[dict
             await db_increment_api_usage(user_record["id"])
             return {
                 "id": user_record["id"], "email": user_record["email"],
+                "name": user_record["name"],
                 "role": user_record["role"], "auth_type": "api_key"
             }
         else:  # It's a Firebase JWT
@@ -174,6 +179,7 @@ async def get_optional_client_identity_ws(websocket: WebSocket) -> Optional[dict
             
             return {
                 "id": user_record["id"], "email": user_record["email"],
+                "name": user_record["name"],
                 "role": user_record["role"], "auth_type": "firebase"
             }
     except Exception:
