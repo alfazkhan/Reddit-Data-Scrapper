@@ -72,12 +72,12 @@ function App() {
 
         if (response.ok) {
           const dbUser = await response.json();
-          console.log(dbUser)
           dispatch(
             authSliceActions.setCredentials({
               user: {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
+                name: dbUser.name
               },
               token: token,
               role: dbUser.role,

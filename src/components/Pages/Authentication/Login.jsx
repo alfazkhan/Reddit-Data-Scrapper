@@ -51,11 +51,10 @@ export default function Login() {
       if (!response.ok) throw new Error("Database profile sync failed."); //Throwing error if there's a user mismatch
       
       const dbUser = await response.json();
-      console.log(dbUser)
       
       dispatch(
         authSliceActions.setCredentials({
-          user: { uid: userCredentials.user.uid, email },
+          user: { uid: userCredentials.user.uid, email, name: dbUser.name },
           token: token,
           role: dbUser.role,
         }),

@@ -6,8 +6,12 @@ import { Flex, Tabs } from "@chakra-ui/react";
 import SubredditsSection from "./SubredditsSection";
 import LogoutButton from "./LogoutButton";
 import UsersSection from "./UsersSection";
+import { useSelector } from "react-redux";
 
 export default function AdminDashboard() {
+
+  const user = useSelector(state=>state.authState.user)
+
   return (
     <Flex direction="column" justifyContent="center" width="80%" margin="auto">
       <Flex gap="4" alignItems="center" justify="space-between" margin="5">
@@ -17,20 +21,25 @@ export default function AdminDashboard() {
         <LogoutButton />
       </Flex>
       <Tabs.Root
-        variant="subtle"
+        variant="plain"
         defaultValue="reanalyze"
-        orientation="vertical"
+        orientation="horizontal"
+        fitted
         css={{
-          "--tabs-indicator-bg": "colors.gray.subtle",
-          "--tabs-indicator-shadow": "shadows.xs",
-          "--tabs-trigger-radius": "radii.full",
+          "--tabs-indicator-bg": "colors.orange.600",
+          "--tabs-indicator-color": "colors.orange.600",
+        }}
+        _open={{
+          animation: "fade-in 800ms ease-out",
         }}
       >
         <Tabs.List>
           <Tabs.Trigger value="subreddits">Subreddits</Tabs.Trigger>
           <Tabs.Trigger value="ignored_words">Ignored Words</Tabs.Trigger>
+
           <Tabs.Trigger value="reanalyze">Reanalyze Data</Tabs.Trigger>
           <Tabs.Trigger value="manage-users">Manage Users</Tabs.Trigger>
+          <Tabs.Indicator rounded="l2" />
         </Tabs.List>
 
         <Tabs.Content value="subreddits">

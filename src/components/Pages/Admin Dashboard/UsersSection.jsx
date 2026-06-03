@@ -6,7 +6,7 @@ import { Table } from "@chakra-ui/react";
 import { useSelector } from "react-redux";
 
 export default function UsersSection() {
-  const [subreddits, setSubreddits] = useState([]);
+  const [users, setUsers] = useState([]);
   const [dataSlice, setdataSlice] = useState([]);
     const authToken = useSelector((state) => state.authState.token);
 
@@ -19,41 +19,38 @@ export default function UsersSection() {
       if (!response.ok) {
         throw new Error(resData.message || "Something went wrong!");
       } else {
-        console.log("USERS:", resData);
-        // setSubreddits(resData);
+        setUsers(resData);
       }
     }
 
     fetchIgnoredWords();
-  }, []);
+  }, [authToken]);
 
   return (
     <>
       <DataTable
-        data={subreddits}
+        data={users}
         tableHeaders={[
           "ID",
           "Name",
-          "Description",
-          "Total Users",
-          "Active",
-          "Updated",
-          "Last Scanned",
+          "Email",
+          "Role",
+          "API Calls Count",
+          "API Calls limit",
         ]}
       >
-        {dataSlice.map((subreddit) => (
-          <Table.Row key={subreddit.id} textAlign="center">
-            <Table.Cell>{subreddit.id}</Table.Cell>
-            <Table.Cell>{subreddit.name}</Table.Cell>
-            <Table.Cell>{subreddit.description}</Table.Cell>
-            <Table.Cell>{subreddit.total_users}</Table.Cell>
-            <Table.Cell>{subreddit.is_active ? "Yes" : "No"}</Table.Cell>
-            <Table.Cell>{subreddit.keep_updated ? "Yes" : "No"}</Table.Cell>
-            <Table.Cell>{subreddit.last_scanned}</Table.Cell>
+        {dataSlice.map((user) => (
+          <Table.Row key={user.id} textAlign="center" >
+            <Table.Cell>{user.id}</Table.Cell>
+            <Table.Cell>{user.name}</Table.Cell>
+            <Table.Cell>{user.email}</Table.Cell>
+            <Table.Cell>{user.role}</Table.Cell>
+            <Table.Cell textAlign="center">{user.api_calls_count}</Table.Cell>
+            <Table.Cell>{user.api_calls_limit === -1 ? "Unlimited" : user.api_calls_limit}</Table.Cell>
           </Table.Row>
         ))}
       </DataTable>
-      <DataPagination data={subreddits} setPaginationData={setdataSlice} />
+      <DataPagination data={users} setPaginationData={setdataSlice} />
     </>
   );
 }
