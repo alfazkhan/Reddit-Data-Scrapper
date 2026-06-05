@@ -118,6 +118,18 @@ export default function Login() {
                 Login
               </Button>
             </Stack>
+            <Stack mt="5">
+              <Button
+                size="sm"
+                color="black"
+                fontWeight="bold"
+                bg="gray.100"
+                onClick={()=>navigate("/")}
+                disabled={loading}
+              >
+                Back
+              </Button>
+            </Stack>
           </GridItem>
         </Grid>
       </AbsoluteCenter>

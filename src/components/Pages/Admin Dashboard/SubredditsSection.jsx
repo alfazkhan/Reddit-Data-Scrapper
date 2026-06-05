@@ -15,7 +15,6 @@ export default function SubredditsSection() {
       if (!response.ok) {
         throw new Error(resData.message || "Something went wrong!");
       } else {
-        console.log(resData);
         setSubreddits(resData);
       }
     }

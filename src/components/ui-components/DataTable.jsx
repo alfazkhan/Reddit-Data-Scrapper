@@ -9,6 +9,7 @@ export default function DataTable({ tableHeaders, children }) {
         variant="outline"
         // showColumnBorder
         stickyHeader
+        css={{ "& td": { textAlign: "center" } }}
       >
         <Table.Caption />
         <Table.Header>
@@ -20,7 +21,7 @@ export default function DataTable({ tableHeaders, children }) {
             ))}
           </Table.Row>
         </Table.Header>
-        <Table.Body justifyContent="center">
+        <Table.Body>
           {children}
         </Table.Body>
       </Table.Root>
