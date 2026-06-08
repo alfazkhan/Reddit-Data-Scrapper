@@ -1,7 +1,6 @@
 import { Table } from "@chakra-ui/react";
 
 export default function DataTable({ tableHeaders, children }) {
-
   return (
     <>
       <Table.Root
@@ -14,18 +13,20 @@ export default function DataTable({ tableHeaders, children }) {
         <Table.Caption />
         <Table.Header>
           <Table.Row>
-            {tableHeaders.map((header)=>(
-            <Table.ColumnHeader color="orange.600" fontWeight="extrabold" key={header} textAlign="center">
-              {header}
-            </Table.ColumnHeader>
+            {tableHeaders.map((header) => (
+              <Table.ColumnHeader
+                color="orange.600"
+                fontWeight="extrabold"
+                key={header}
+                textAlign="center"
+              >
+                {header}
+              </Table.ColumnHeader>
             ))}
           </Table.Row>
         </Table.Header>
-        <Table.Body>
-          {children}
-        </Table.Body>
+        <Table.Body>{children}</Table.Body>
       </Table.Root>
-
     </>
   );
 }

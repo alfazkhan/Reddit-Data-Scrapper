@@ -5,14 +5,14 @@ import ReanalyzeSection from "./ReanalyzeSection";
 import { Flex, Tabs } from "@chakra-ui/react";
 import SubredditsSection from "./SubredditsSection";
 import LogoutButton from "./LogoutButton";
-import UsersSection from "./UsersSection";
+import UsersSection from "./Users/UsersSection";
 import { useSelector } from "react-redux";
 
 const tabsConfig = {
   Subreddits: ["Super Admin", "Admin", "Guest", "Developer"],
   "Ignored Words": ["Super Admin", "Admin", "Guest", "Developer"],
-  Reanalyze: ["Super Admin", "Admin", "Guest", "Developer"],
-  "Manage Users": ["Super Admin", "Admin"],
+  Reanalyze: ["Super Admin", "Guest", "Developer"],
+  "Manage Users": ["Super Admin"],
 };
 
 export default function AdminDashboard() {
@@ -31,6 +31,8 @@ export default function AdminDashboard() {
         defaultValue="subreddits"
         orientation="horizontal"
         fitted
+        lazyMount
+        // unmountOnExit    
         css={{
           "--tabs-indicator-bg": "colors.orange.600",
           "--tabs-indicator-color": "colors.orange.600",
@@ -55,10 +57,10 @@ export default function AdminDashboard() {
           <IgnoredWordsSection />
         </Tabs.Content>
         <Tabs.Content value="reanalyze">
-          <ReanalyzeSection />;
+          <ReanalyzeSection />
         </Tabs.Content>
         <Tabs.Content value="manage users">
-          <UsersSection />;
+          <UsersSection />
         </Tabs.Content>
       </Tabs.Root>
     </Flex>

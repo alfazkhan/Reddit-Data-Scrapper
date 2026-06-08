@@ -64,7 +64,7 @@ export default function UserInput({ onFetchData, processingStatus }) {
           <Select.Root
             collection={selectCollection}
             onValueChange={(e) => setSubredditName(e.value[0] || "")}
-            value={[subredditName] }
+            value={[subredditName]}
           >
             <Select.HiddenSelect required />
             <Field.Label >

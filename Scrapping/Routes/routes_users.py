@@ -35,17 +35,22 @@ async def create_user_profile(
         raise HTTPException(status_code=400, detail=f"Invalid target configuration role. Supported: {valid_roles}")
 
     try:
-        # 1. Register profile in Firebase Cloud Auth
+        # 1. Register profile in Firebase Cloud Auth first (cannot wrap Firebase creation in DB transaction)
         fb_user = firebase_auth.create_user(email=email, password=password, display_name=name)
+    except Exception as err:
+        raise HTTPException(status_code=400, detail=f"Firebase Profile Creation Failed: {str(err)}")
         
+    try:
         # 2. Replicate state records down into PostgreSQL tracking maps
         success = await db_create_user_profile(fb_user.uid, email, name, role, calls_limit)
         if not success:
-            raise HTTPException(status_code=500, detail="Identity added to Firebase, but local DB compilation conflicted.")
+            raise Exception("Local database collision or constraint failure.")
             
         return {"status": "success", "message": f"Account synchronized successfully for {email} assigned to tier: {role}."}
     except Exception as err:
-        raise HTTPException(status_code=400, detail=f"Provisional Execution Failed: {str(err)}")
+        # 3. Rollback Firebase if PostgreSQL insert fails (Compensating Transaction)
+        firebase_auth.delete_user(fb_user.uid)
+        raise HTTPException(status_code=500, detail=f"Database synchronization failed. Firebase identity rolled back. Error: {str(err)}")
 
 
 @router.post("/generate-api-key")
@@ -87,24 +92,48 @@ async def update_user_profile(
     payload: dict = Body(...),
     super_admin: dict = Depends(require_role(["Super Admin"]))
 ):
-    """Updates a user's access role or API consumption limit."""
+    """Updates a user's access role, API limits, or core profile info transactionally across DB and Firebase."""
     role = payload.get("role")
     calls_limit = payload.get("api_calls_limit")
+    name = payload.get("name")
+    email = payload.get("email")
+    password = payload.get("password")
     
     valid_roles = ["Super Admin", "Admin", "Guest User", "Developer"]
     if role and role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid target configuration role. Supported: {valid_roles}")
         
-    success = await db_update_user_profile(user_id, role, calls_limit)
-    if not success:
-        raise HTTPException(status_code=404, detail="User record not found in the system.")
-    return {"status": "success", "message": "User profile updated successfully."}
+    def firebase_sync_callback(uid: str):
+        update_kwargs = {}
+        if name: update_kwargs["display_name"] = name
+        if email: update_kwargs["email"] = email
+        if password: update_kwargs["password"] = password
+        
+        if update_kwargs:
+            firebase_auth.update_user(uid, **update_kwargs)
+
+    try:
+        success = await db_update_user_profile(user_id, role, calls_limit, name, email, firebase_sync_callback)
+        if not success:
+            raise HTTPException(status_code=404, detail="User record not found in the system.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transaction failed, rollback executed. Error: {str(e)}")
+        
+    return {"status": "success", "message": "User profile synchronized and updated successfully."}
 
 
 @router.delete("/{user_id}")
 async def delete_user_profile(user_id: int, super_admin: dict = Depends(require_role(["Super Admin"]))):
-    """Permanently deletes a user from the local PostgreSQL database."""
-    success = await db_delete_user_profile(user_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="User record not found in the system.")
-    return {"status": "success", "message": "User profile deleted successfully."}
+    """Permanently deletes a user from both PostgreSQL and Firebase within a single atomic transaction."""
+    
+    def firebase_delete_callback(uid: str):
+        firebase_auth.delete_user(uid)
+        
+    try:
+        deleted_uid = await db_delete_user_profile(user_id, firebase_delete_callback)
+        if not deleted_uid:
+            raise HTTPException(status_code=404, detail="User record not found in the system.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transaction failed, rollback executed. Error: {str(e)}")
+        
+    return {"status": "success", "message": "User profile completely deleted from database and Firebase."}
